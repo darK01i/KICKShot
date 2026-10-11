@@ -3,7 +3,7 @@
     if (!globalThis.KICKShotMediaCodes) {
         throw new Error("KICKShot: módulo de códigos de mídia não foi carregado.");
     }
-    const { codificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, montarMensagemComMidia, separarMensagemComMidia } = globalThis.KICKShotMediaCodes;
+    const { codificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, montarMensagemComMidia, separarMensagemComMidia } = globalThis.KICKShotMediaCodes;
     globalThis.__KICKSHOT_CONTENT_SCRIPT_STARTED__ = true;
 const SELETOR_CAMPO_EDITAVEL = 'textarea, input, [contenteditable]:not([contenteditable="false"]), [role="textbox"]';
 const codigosColadosRecentementeKMC = new Map();
@@ -1143,13 +1143,16 @@ function converterEnderecoParaTag(valor) {
     if (
         /^tnr:[A-Za-z0-9_.-]+$/i.test(valor)
     ) {
-        return valor;
+        const id = decodificarCodigoTenor(valor);
+        return id ? codificarCodigoTenor(id) : null;
     }
 
     if (
         /^KMCGIF_TNR_[A-Za-z0-9_.-]+$/i.test(valor)
     ) {
-        return valor;
+        const id = valor.replace(/^KMCGIF_TNR_/i, "").replace(/[._]GIF$/i, "");
+        const codigo = codificarCodigoTenor(id);
+        return codigo || valor;
     }
 
     if (
@@ -1259,7 +1262,7 @@ function converterEnderecoParaTag(valor) {
             resultado[1];
 
         const tag =
-            "tnr:" + id;
+            codificarCodigoTenor(id);
 
         salvarLinkOriginal(
             tag,
@@ -1280,7 +1283,7 @@ function converterEnderecoParaTag(valor) {
             resultado[1];
 
         const tag =
-            "tnr:" + id;
+            codificarCodigoTenor(id);
 
         salvarLinkOriginal(
             tag,
@@ -1301,7 +1304,7 @@ function converterEnderecoParaTag(valor) {
             resultado[1];
 
         const tag =
-            "tnr:" + id;
+            codificarCodigoTenor(id);
 
         salvarLinkOriginal(
             tag,
@@ -1319,7 +1322,7 @@ function converterEnderecoParaTag(valor) {
     if (resultado) {
 
         const tag =
-            "tnr:" + resultado[1];
+            codificarCodigoTenor(resultado[1]);
 
         salvarLinkOriginal(
             tag,
@@ -1865,9 +1868,9 @@ function atualizarLinkColado() {
     if (/^gph:/i.test(tag)) {
         media = criarImagemGiphy(decodificarCodigoGiphy(tag) || tag.slice(4));
     } else if (/^tnr:/i.test(tag)) {
-        media = criarImagemTenor(tag.slice(4));
+        media = criarImagemTenor(decodificarCodigoTenor(tag));
     } else if (/^KMCGIF_TNR_/i.test(tag)) {
-        media = criarImagemTenor(tag.replace(/^KMCGIF_TNR_/i, ""));
+        media = criarImagemTenor(tag.replace(/^KMCGIF_TNR_/i, "").replace(/[._]GIF$/i, ""));
     } else if (/^(?:KMC_|KMCIMG_)/i.test(tag)) {
         const url = decodificarCodigoImagem(tag);
         if (url) media = criarImagemEnviada(url);
@@ -2715,10 +2718,10 @@ function criarImagemTenor(id) {
         "true";
 
     const tag =
-        "tnr:" + id;
+        codificarCodigoTenor(id);
 
     const linkOriginal =
-        obterLinkOriginal(tag) || obterLinkOriginal("KMCGIF_TNR_" + id);
+        obterLinkOriginal(tag) || obterLinkOriginal("tnr:" + id) || obterLinkOriginal("KMCGIF_TNR_" + id);
 
     if (linkOriginal) {
 
@@ -3386,9 +3389,9 @@ function processarElementoGif(elemento) {
 
     const codigoTenorNovo = texto.match(/^KMCGIF_TNR_([A-Za-z0-9_.-]+)$/i);
     if (codigoTenorNovo) {
-        const id = codigoTenorNovo[1];
+        const id = codigoTenorNovo[1].replace(/[._]GIF$/i, "");
         const imagem = criarImagemTenor(id);
-        renderizarCodigoComMidia(elemento, "tnr:" + id, imagem.src, imagem, true, legenda);
+        renderizarCodigoComMidia(elemento, codificarCodigoTenor(id), imagem.src, imagem, true, legenda);
         return true;
     }
 
@@ -3414,20 +3417,13 @@ function processarElementoGif(elemento) {
     // TENOR
     // ====================================
 
-    let resultado =
-        texto.match(
-            /^tnr:([A-Za-z0-9_.-]+)$/
-        );
-
-    if (resultado) {
-
-        const id =
-            resultado[1];
+    const idTenor = decodificarCodigoTenor(texto);
+    if (idTenor) {
 
         const imagem =
-            criarImagemTenor(id);
+            criarImagemTenor(idTenor);
 
-        renderizarCodigoComMidia(elemento, "tnr:" + id, imagem.src, imagem, true, legenda);
+        renderizarCodigoComMidia(elemento, codificarCodigoTenor(idTenor), imagem.src, imagem, true, legenda);
 
         return true;
     }
@@ -3437,6 +3433,7 @@ function processarElementoGif(elemento) {
     // COMPATIBILIDADE ANTIGA
     // ====================================
 
+    let resultado;
     resultado =
         texto.match(
             /^img:(https%3A%2F%2F.+)$/i
@@ -3599,9 +3596,9 @@ function procurarGifDentroElemento(
         if (/^KMCGIF_TNR_/i.test(codigo)) {
             const pai = textoNode.parentElement;
             if (pai && pai.dataset.kmcProcessed !== "true") {
-                const id = codigo.replace(/^KMCGIF_TNR_/i, "");
+                const id = codigo.replace(/^KMCGIF_TNR_/i, "").replace(/[._]GIF$/i, "");
                 const imagem = criarImagemTenor(id);
-                renderizarCodigoComMidia(pai, "tnr:" + id, imagem.src, imagem, true);
+                renderizarCodigoComMidia(pai, codificarCodigoTenor(id), imagem.src, imagem, true);
             }
             continue;
         }

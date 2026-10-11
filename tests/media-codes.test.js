@@ -47,6 +47,34 @@ test("adiciona _GIF aos GIFs GIPHY e ainda entende códigos antigos", () => {
     }
 });
 
+test("adiciona _GIF aos GIFs Tenor e mantém compatibilidade com códigos antigos", () => {
+    for (const mediaCodes of mediaCodesModules) {
+        const codigoNovo = mediaCodes.codificarCodigoTenor("tenor123");
+        assert.equal(codigoNovo, "tnr:tenor123_GIF");
+        assert.equal(mediaCodes.decodificarCodigoTenor(codigoNovo), "tenor123");
+        assert.equal(mediaCodes.decodificarCodigoTenor("tnr:tenor123"), "tenor123");
+        assert.equal(mediaCodes.decodificarCodigoTenor("tnr:tenor123.GIF"), "tenor123");
+        assert.equal(mediaCodes.codificarCodigoTenor("id com espaço"), null);
+        const mensagem = mediaCodes.montarMensagemComMidia("olha isso", codigoNovo);
+        assert.equal(mensagem, "olha isso tnr:tenor123_GIF");
+        assert.deepEqual(mediaCodes.separarMensagemComMidia(mensagem), {
+            antes: "olha isso",
+            codigo: codigoNovo,
+            depois: ""
+        });
+    }
+});
+
+test("normaliza os códigos Tenor com _GIF em ambos os content scripts", () => {
+    for (const arquivo of ["../content.js", "../Firefox/content.js"]) {
+        const contentScript = fs.readFileSync(path.join(__dirname, arquivo), "utf8");
+
+        assert.match(contentScript, /const \{[^}]*codificarCodigoTenor, decodificarCodigoTenor[^}]*\}/);
+        assert.match(contentScript, /codificarCodigoTenor\(resultado\[1\]\)/);
+        assert.match(contentScript, /decodificarCodigoTenor\(texto\)/);
+    }
+});
+
 test("usa o código GIPHY terminado em _GIF na busca, prévia e leitura do chat", () => {
     for (const arquivo of ["../content.js", "../Firefox/content.js"]) {
         const contentScript = fs.readFileSync(path.join(__dirname, arquivo), "utf8");

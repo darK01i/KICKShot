@@ -68,6 +68,19 @@
         return /^gph:/i.test(codigo) && /^[A-Za-z0-9_-]+$/.test(id) ? id : null;
     }
 
+    function codificarCodigoTenor(id) {
+        if (typeof id !== "string" || !/^[A-Za-z0-9_.-]+$/.test(id)) return null;
+        return "tnr:" + id + "_GIF";
+    }
+
+    function decodificarCodigoTenor(codigo) {
+        if (typeof codigo !== "string") return null;
+        const id = codigo
+            .replace(/^tnr:/i, "")
+            .replace(/[._]GIF$/i, "");
+        return /^tnr:/i.test(codigo) && /^[A-Za-z0-9_.-]+$/.test(id) ? id : null;
+    }
+
     function montarMensagemComMidia(texto, codigo) {
         const mensagem = String(texto || "").trim();
         return mensagem ? mensagem + " " + codigo : codigo;
@@ -91,5 +104,5 @@
         return null;
     }
 
-    return Object.freeze({ codificarImagem, decodificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, montarMensagemComMidia, separarMensagemComMidia });
+    return Object.freeze({ codificarImagem, decodificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, montarMensagemComMidia, separarMensagemComMidia });
 });

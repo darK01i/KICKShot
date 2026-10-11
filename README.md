@@ -20,7 +20,7 @@ Extensão independente para compartilhar imagens e GIFs no chat da Kick.
 - Envio e edição de imagens no chat da Kick.
 - Mensagem opcional antes da imagem ou GIF enviado.
 - Prévia do texto digitado junto da imagem ou GIF.
-- Busca e compartilhamento de GIFs pelo GIPHY, sem precisar configurar uma chave de API.
+- Busca e compartilhamento de GIFs pelo GIPHY, sem precisar configurar uma chave de API; também aceita links de GIFs do Tenor.
 - Visualização de mídias compatíveis compartilhadas no chat.
 - Bloqueio local de mídias pelo código e pela impressão digital do arquivo, para reconhecer o mesmo arquivo publicado com outro código.
 
