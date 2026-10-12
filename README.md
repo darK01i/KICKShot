@@ -27,6 +27,10 @@ Extensão independente para compartilhar imagens e GIFs no chat da Kick.
 
 A busca de GIFs usa o servidor intermediário da KICKShot. O bloqueio pela impressão digital compara o arquivo exato localmente e não reconhece versões editadas da mídia. Consulte `privacy.html` para saber como os serviços externos são usados.
 
+## Aviso sobre conteúdo enviado
+
+Você é responsável pelo conteúdo que enviar. Compartilhe apenas arquivos que tem direito de usar e respeite as regras da Kick. As imagens enviadas são hospedadas pelo Catbox e estão sujeitas às regras do serviço.
+
 ## Testes
 
 Os testes do módulo de códigos de mídia usam o test runner nativo do Node.js:
