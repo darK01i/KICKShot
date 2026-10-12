@@ -1,5 +1,7 @@
 # KICKShot
 
+**Aviso:** Não envie conteúdo ilegal ou criminoso. Você é responsável pelas imagens compartilhadas. A extensão não se responsabiliza pelo conteúdo enviado. As imagens são hospedadas pelo Catbox e estão sujeitas às suas regras.
+
 Extensão independente para compartilhar imagens e GIFs no chat da Kick.
 
 ## Chrome e Brave
@@ -26,10 +28,6 @@ Extensão independente para compartilhar imagens e GIFs no chat da Kick.
 - Painéis principal e de GIFs reposicionáveis ao arrastar o cabeçalho; as posições ficam salvas neste navegador.
 
 A busca de GIFs usa o servidor intermediário da KICKShot. O bloqueio pela impressão digital compara o arquivo exato localmente e não reconhece versões editadas da mídia. Consulte `privacy.html` para saber como os serviços externos são usados.
-
-## Aviso sobre conteúdo enviado
-
-Você é responsável pelo conteúdo que enviar. Compartilhe apenas arquivos que tem direito de usar e respeite as regras da Kick. As imagens enviadas são hospedadas pelo Catbox e estão sujeitas às regras do serviço.
 
 ## Testes
 
