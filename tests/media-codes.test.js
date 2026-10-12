@@ -208,6 +208,20 @@ test("carrega a mídia selecionada na prévia do painel nos dois navegadores", (
     }
 });
 
+test("permite arrastar e salva a posição dos painéis principal e de GIFs nos dois navegadores", () => {
+    for (const arquivo of ["../content.js", "../Firefox/content.js"]) {
+        const contentScript = fs.readFileSync(path.join(__dirname, arquivo), "utf8");
+
+        assert.match(contentScript, /tornarPainelArrastavelKMC\(painel, "principal"/);
+        assert.match(contentScript, /tornarPainelArrastavelKMC\(gifPainel, "gifs"/);
+        assert.match(contentScript, /cabecalho\.addEventListener\("pointerdown"/);
+        assert.match(contentScript, /cabecalho\.addEventListener\("pointermove"/);
+        assert.match(contentScript, /localStorage\.setItem\("kmc_posicoes_paineis"/);
+        assert.match(contentScript, /posicaoSalva\s*\?\s*posicaoSalva\.left/);
+        assert.match(contentScript, /posicaoSalva\s*\?\s*posicaoSalva\.top/);
+    }
+});
+
 test("calcula hash SHA-256 da mídia permitida nos backgrounds Chrome e Firefox", async () => {
     const conteudo = new TextEncoder().encode("conteúdo de teste da mídia");
     const hashEsperado = createHash("sha256").update(conteudo).digest("hex");

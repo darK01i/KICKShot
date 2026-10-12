@@ -23,6 +23,7 @@ Extensão independente para compartilhar imagens e GIFs no chat da Kick.
 - Busca e compartilhamento de GIFs pelo GIPHY, sem precisar configurar uma chave de API; também aceita links de GIFs do Tenor.
 - Visualização de mídias compatíveis compartilhadas no chat.
 - Bloqueio local de mídias pelo código e pela impressão digital do arquivo, para reconhecer o mesmo arquivo publicado com outro código.
+- Painéis principal e de GIFs reposicionáveis ao arrastar o cabeçalho; as posições ficam salvas neste navegador.
 
 A busca de GIFs usa o servidor intermediário da KICKShot. O bloqueio pela impressão digital compara o arquivo exato localmente e não reconhece versões editadas da mídia. Consulte `privacy.html` para saber como os serviços externos são usados.
 

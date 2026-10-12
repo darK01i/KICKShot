@@ -672,6 +672,95 @@ function obterLinkOriginal(tag) {
 // POSICIONAMENTO
 // ========================================
 
+function carregarPosicoesPaineisKMC() {
+    try {
+        const salvas = JSON.parse(localStorage.getItem("kmc_posicoes_paineis") || "{}");
+        return salvas && typeof salvas === "object" && !Array.isArray(salvas) ? salvas : {};
+    } catch (erro) {
+        console.warn("KickMediaChat: não foi possível carregar as posições dos painéis.", erro);
+        return {};
+    }
+}
+
+const posicoesPaineisKMC = carregarPosicoesPaineisKMC();
+
+function salvarPosicoesPaineisKMC() {
+    try {
+        localStorage.setItem("kmc_posicoes_paineis", JSON.stringify(posicoesPaineisKMC));
+    } catch (erro) {
+        console.warn("KickMediaChat: não foi possível salvar as posições dos painéis.", erro);
+    }
+}
+
+function limitarPosicaoPainelKMC(elemento, left, top) {
+    const viewport = window.visualViewport;
+    const margem = 12;
+    const esquerdaVisivel = viewport?.offsetLeft || 0;
+    const topoVisivel = viewport?.offsetTop || 0;
+    const larguraVisivel = viewport?.width || window.innerWidth;
+    const alturaVisivel = viewport?.height || window.innerHeight;
+    const rect = elemento.getBoundingClientRect();
+    const maxLeft = esquerdaVisivel + larguraVisivel - rect.width - margem;
+    const maxTop = topoVisivel + alturaVisivel - rect.height - margem;
+
+    return {
+        left: Math.max(esquerdaVisivel + margem, Math.min(left, maxLeft)),
+        top: Math.max(topoVisivel + margem, Math.min(top, maxTop))
+    };
+}
+
+function tornarPainelArrastavelKMC(elemento, identificador, titulo) {
+    const cabecalho = elemento.querySelector("h3");
+    if (!cabecalho) return;
+
+    cabecalho.title = titulo;
+    cabecalho.style.cursor = "grab";
+    cabecalho.style.touchAction = "none";
+    cabecalho.style.userSelect = "none";
+
+    cabecalho.addEventListener("pointerdown", evento => {
+        if (evento.button !== 0 || evento.target.closest("button")) return;
+
+        const rect = elemento.getBoundingClientRect();
+        const inicioX = evento.clientX;
+        const inicioY = evento.clientY;
+        const inicioLeft = rect.left;
+        const inicioTop = rect.top;
+        cabecalho.style.cursor = "grabbing";
+        cabecalho.setPointerCapture(evento.pointerId);
+
+        const mover = movimento => {
+            const posicao = limitarPosicaoPainelKMC(
+                elemento,
+                inicioLeft + movimento.clientX - inicioX,
+                inicioTop + movimento.clientY - inicioY
+            );
+            elemento.style.left = `${posicao.left}px`;
+            elemento.style.top = `${posicao.top}px`;
+            posicoesPaineisKMC[identificador] = posicao;
+        };
+
+        const finalizar = () => {
+            cabecalho.style.cursor = "grab";
+            cabecalho.removeEventListener("pointermove", mover);
+            cabecalho.removeEventListener("pointerup", finalizar);
+            cabecalho.removeEventListener("pointercancel", finalizar);
+            if (cabecalho.hasPointerCapture(evento.pointerId)) {
+                cabecalho.releasePointerCapture(evento.pointerId);
+            }
+            salvarPosicoesPaineisKMC();
+        };
+
+        cabecalho.addEventListener("pointermove", mover);
+        cabecalho.addEventListener("pointerup", finalizar, { once: true });
+        cabecalho.addEventListener("pointercancel", finalizar, { once: true });
+        evento.preventDefault();
+    });
+}
+
+tornarPainelArrastavelKMC(painel, "principal", "Arraste para mover o painel");
+tornarPainelArrastavelKMC(gifPainel, "gifs", "Arraste para mover o painel de GIFs");
+
 function posicionarPainel() {
     const rect = botao.style.display === "none"
         ? null
@@ -708,13 +797,18 @@ function posicionarPainel() {
         }
 
         const altura = elemento.getBoundingClientRect().height || alturaMaxima;
-        const esquerdaDesejada = rect
+        const posicaoSalva = posicoesPaineisKMC[elemento === gifPainel ? "gifs" : "principal"];
+        const esquerdaDesejada = posicaoSalva
+            ? posicaoSalva.left
+            : rect
             ? rect.left - (largura - larguraBase)
             : (parseFloat(elemento.style.left) || esquerdaVisivel + margem);
         const maxEsquerda = esquerdaVisivel + larguraVisivel - largura - margem;
         const maxTopo = topoVisivel + alturaVisivel - altura - margem;
         const esquerda = Math.max(esquerdaVisivel + margem, Math.min(esquerdaDesejada, maxEsquerda));
-        const topoPreferido = rect
+        const topoPreferido = posicaoSalva
+            ? posicaoSalva.top
+            : rect
             ? topoDesejado
             : (parseFloat(elemento.style.top) || topoVisivel + margem);
         const topo = Math.max(topoVisivel + margem, Math.min(topoPreferido, maxTopo));
