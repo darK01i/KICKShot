@@ -525,9 +525,6 @@ painel.innerHTML = `
     >
         📤 Enviar
     </button>
-    <p style="margin:8px 0 0; color:#c4c4cc; font-size:11px; line-height:1.4; text-align:center;">
-        Você é responsável pelo conteúdo que enviar. Compartilhe apenas arquivos que tem direito de usar e respeite as regras da Kick. As imagens enviadas são hospedadas pelo Catbox e estão sujeitas às regras do serviço.
-    </p>
 `;
 
 document.body.appendChild(painel);
