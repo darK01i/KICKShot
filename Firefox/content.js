@@ -525,6 +525,9 @@ painel.innerHTML = `
     >
         📤 Enviar
     </button>
+    <p style="margin:8px 0 0; color:#c4c4cc; font-size:11px; line-height:1.4; text-align:center;">
+        <strong>Aviso:</strong> Não envie conteúdo ilegal ou criminoso. Você é responsável pelas imagens compartilhadas. A extensão não se responsabiliza pelo conteúdo enviado. As imagens são hospedadas pelo Catbox e estão sujeitas às suas regras.
+    </p>
 `;
 
 document.body.appendChild(painel);
