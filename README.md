@@ -8,7 +8,7 @@ Extensão independente para compartilhar imagens e GIFs no chat da Kick.
 
 ## Chrome e Brave
 
-1. Baixe a versão estável 1.0.6: [KICKShot para Chrome/Brave e Firefox](https://github.com/darK01i/KICKShot/releases/download/v1.0.6/KICKShot-v1.0.6.zip). A branch `main` contém a versão 1.0.8 em desenvolvimento, ainda sem release.
+1. Baixe o código mais recente para Chrome ou Brave pelo [ZIP do branch main](https://github.com/darK01i/KICKShot/archive/refs/heads/main.zip). Para Firefox, instale a versão 1.0.8 pela [loja oficial](https://addons.mozilla.org/pt-BR/firefox/addon/kickshot/).
 2. Extraia o ZIP.
 3. Abra `chrome://extensions` ou `brave://extensions` e ative o modo de desenvolvedor.
 4. Clique em **Carregar sem compactação** e selecione a pasta extraída que contém `manifest.json`.
