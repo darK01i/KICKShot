@@ -222,6 +222,31 @@ test("permite arrastar e salva a posição dos painéis principal e de GIFs nos 
     }
 });
 
+test("fecha os painéis quando a animação de saída termina nos dois navegadores", () => {
+    for (const arquivo of ["../content.js", "../Firefox/content.js"]) {
+        const contentScript = fs.readFileSync(path.join(__dirname, arquivo), "utf8");
+        const inicio = contentScript.indexOf("function fecharPainelAnimado(");
+        const fim = contentScript.indexOf("\nfunction abrirPainelAnimado(", inicio);
+        const trecho = contentScript.slice(inicio, fim);
+        let animacao;
+        const painel = {
+            style: { display: "block" },
+            getAnimations: () => [],
+            animate: () => (animacao = {})
+        };
+
+        assert.notEqual(inicio, -1);
+        vm.runInNewContext(`${trecho}; fecharPainelAnimado(painel);`, {
+            painel,
+            window: { matchMedia: () => ({ matches: false }) }
+        });
+
+        assert.equal(typeof animacao.onfinish, "function");
+        animacao.onfinish();
+        assert.equal(painel.style.display, "none");
+    }
+});
+
 test("calcula hash SHA-256 da mídia permitida nos backgrounds Chrome e Firefox", async () => {
     const conteudo = new TextEncoder().encode("conteúdo de teste da mídia");
     const hashEsperado = createHash("sha256").update(conteudo).digest("hex");

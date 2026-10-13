@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KICKShot",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "browser_specific_settings": {
     "gecko": {
       "id": "kickshot@darkartz75",

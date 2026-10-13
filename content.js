@@ -577,9 +577,7 @@ function fecharPainelAnimado(painelAlvo) {
         { duration: 240, easing: "cubic-bezier(.4,0,1,1)" }
     );
     saida.onfinish = () => {
-        if (painelAlvo.getAnimations().includes(saida)) {
-            painelAlvo.style.display = "none";
-        }
+        painelAlvo.style.display = "none";
     };
 }
 
