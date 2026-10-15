@@ -9,3 +9,8 @@ Extensão independente para compartilhar imagens e GIFs no chat da Kick.
 2. Extraia o ZIP.
 3. Abra `chrome://extensions` ou `brave://extensions` e ative o modo de desenvolvedor.
 4. Clique em **Carregar sem compactação** e selecione a pasta extraída que contém `manifest.json`.
+
+## Verificações antes de publicar
+O módulo em `shared/media-codes.js` é a fonte comum de regras para imagens, GIPHY e Tenor. Depois de editá-lo, rode `npm run sync:shared` para atualizar as cópias que os navegadores carregam.
+
+Antes de preparar uma versão, rode `npm run preflight`. Esse comando verifica se as cópias continuam iguais, confere a sintaxe dos arquivos e manifestos e executa os testes dos recursos principais.
