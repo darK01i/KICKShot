@@ -358,6 +358,140 @@ estilosKMC.textContent = `
         text-align: center;
         line-height: 1 !important;
     }
+    #kmc-panel #kmc-coffee-open {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 2px !important;
+        width: auto !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: #c4c4cc !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        line-height: 1.2 !important;
+        white-space: nowrap;
+        transform: translateX(5px);
+        cursor: pointer;
+    }
+    #kmc-panel #kmc-coffee-open:hover {
+        border: 0 !important;
+        background: transparent !important;
+        color: #fff !important;
+        text-decoration: underline;
+    }
+    #kmc-coffee-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000005;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        padding: 16px;
+        background: rgba(0, 0, 0, .72);
+        color: #f4f4f5;
+        font-family: "Instrument Sans", Arial, sans-serif;
+    }
+    #kmc-coffee-card {
+        position: relative;
+        box-sizing: border-box;
+        width: min(430px, calc(100vw - 32px));
+        max-height: calc(100vh - 32px);
+        overflow-y: auto;
+        padding: 28px 20px;
+        border: 1px solid #34343a;
+        border-radius: 14px;
+        background: #18181b;
+        box-shadow: 0 16px 44px rgba(0, 0, 0, .55);
+        text-align: center;
+    }
+    #kmc-coffee-card h2 {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin: 0 36px 20px 0;
+        color: #fff;
+        font-family: "Bricolage Grotesque", "Instrument Sans", Arial, sans-serif;
+        font-size: 23px;
+        font-weight: 700;
+        letter-spacing: .2px;
+        line-height: 1.25;
+        text-align: left;
+    }
+    #kmc-coffee-card p {
+        margin: 0 0 22px;
+        color: #d4d4d8;
+        font-size: 15px;
+        line-height: 1.6;
+        text-align: left;
+    }
+    #kmc-coffee-notice {
+        padding: 18px 14px;
+        margin-bottom: 22px;
+        border: 1px solid rgba(83, 252, 24, .5);
+        border-radius: 10px;
+        background: rgba(83, 252, 24, .1);
+        color: #d9ffd0 !important;
+        font-size: 16px !important;
+        font-weight: 400;
+    }
+    #kmc-coffee-notice strong { font-weight: 700; }
+    #kmc-coffee-card #kmc-coffee-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border: 1px solid #3b3b42;
+        border-radius: 50%;
+        background: #27272a;
+        color: #fff;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+    }
+    #kmc-coffee-qr-wrap {
+        display: grid;
+        justify-items: center;
+        gap: 12px;
+        margin: 24px auto;
+        color: #d4d4d8;
+        font-size: 13px;
+    }
+    #kmc-coffee-qr {
+        display: block;
+        box-sizing: border-box;
+        width: min(250px, 100%);
+        max-width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        object-fit: contain;
+    }
+    #kmc-coffee-link {
+        display: block;
+        padding: 14px 12px;
+        border: 1px solid #3b3b42;
+        border-radius: 8px;
+        background: #27272a;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    #kmc-coffee-link:hover { border-color: #53fc18; }
     #kmc-gif-query::-webkit-search-cancel-button,
     #kmc-gif-query::-moz-search-clear-button {
         -webkit-appearance: none;
@@ -429,7 +563,7 @@ Object.assign(painel.style, {
 });
 
 painel.innerHTML = `
-    <h3>🎞️ KICKShot <button id="kmc-close" type="button" aria-label="Fechar">×</button></h3>
+    <h3><span style="display:inline-flex; align-items:center; gap:14px;"><span>🎞️ KICKShot</span><button id="kmc-coffee-open" type="button" aria-haspopup="dialog" aria-controls="kmc-coffee-overlay">Pague um Café <img src="https://cdn.7tv.app/emote/60ae4121b2ecb01505492dbe/2x.webp" alt="Figurinha 7TV" width="16" height="16" loading="lazy" decoding="async" style="object-fit:contain; vertical-align:middle; transform:translate(2px, -2px);"></button></span><button id="kmc-close" type="button" aria-label="Fechar">×</button></h3>
 
         <button
         id="kmc-open-gifs"
@@ -528,9 +662,37 @@ painel.innerHTML = `
     >
         📤 Enviar
     </button>
+    <p style="margin:8px 0 0; color:#c4c4cc; font-size:11px; line-height:1.5; text-align:left;">
+        <strong>Aviso:</strong> Não envie conteúdo ilegal ou criminoso. Você é responsável pelas imagens compartilhadas. A extensão não se responsabiliza pelo conteúdo enviado. As imagens são hospedadas pelo Catbox e estão sujeitas às suas regras.
+    </p>
 `;
 
 document.body.appendChild(painel);
+
+const modalApoioKMC = document.createElement("div");
+modalApoioKMC.id = "kmc-coffee-overlay";
+modalApoioKMC.setAttribute("role", "dialog");
+modalApoioKMC.setAttribute("aria-modal", "true");
+modalApoioKMC.setAttribute("aria-labelledby", "kmc-coffee-title");
+modalApoioKMC.innerHTML = `
+    <section id="kmc-coffee-card">
+        <button id="kmc-coffee-close" type="button" aria-label="Fechar">×</button>
+        <h2 id="kmc-coffee-title"><span>Pague um Café</span><img src="https://cdn.7tv.app/emote/60ae4121b2ecb01505492dbe/2x.webp" alt="Peepo" width="40" height="40" loading="lazy" decoding="async" style="display:block; flex:0 0 40px; object-fit:contain; transform:translate(7px, -8px);"></h2>
+        <p id="kmc-coffee-notice"><strong>AVISO:</strong> Você pode usar a extensão normalmente, sem precisar fazer nenhuma doação! 💚</p>
+        <p>Estou arrecadando R$ 25 para publicar a extensão na Chrome Web Store. Se quiser apoiar o projeto e ajudar a tornar isso possível, qualquer contribuição será muito bem-vinda. Obrigado pelo apoio!</p>
+        <div id="kmc-coffee-qr-wrap">
+            <img id="kmc-coffee-qr" alt="QR Code para abrir a vaquinha da KICKShot no LivePix" width="250" height="250" loading="lazy" decoding="async">
+            <span>Escaneie para abrir a vaquinha e ver o progresso.</span>
+        </div>
+        <a id="kmc-coffee-link" href="https://vaquinha.livepix.gg/kickshot-webstore" target="_blank" rel="noopener noreferrer">Abrir vaquinha no LivePix</a>
+        <p style="margin:10px 0 0; font-size:13px;">O QR Code leva você à campanha oficial do LivePix. Após escolher o valor da contribuição, basta realizar o pagamento via Pix. O progresso da meta será atualizado quando a doação for confirmada.</p>
+    </section>
+`;
+document.body.appendChild(modalApoioKMC);
+const runtimeApoioKMC = globalThis.browser?.runtime || globalThis.chrome?.runtime;
+if (runtimeApoioKMC?.getURL) {
+    document.getElementById("kmc-coffee-qr").src = runtimeApoioKMC.getURL("icons/qr-vaquinha-livepix-gg.png");
+}
 
 const gifPainel = document.createElement("div");
 
@@ -1079,6 +1241,42 @@ painel.addEventListener("paste", evento => {
 document.getElementById("kmc-close").addEventListener("click", evento => {
     evento.stopPropagation();
     fecharPainelAnimado(painel);
+});
+
+const botaoApoioKMC = document.getElementById("kmc-coffee-open");
+const fecharApoioKMC = () => {
+    modalApoioKMC.style.display = "none";
+    botaoApoioKMC.focus();
+};
+botaoApoioKMC.addEventListener("click", evento => {
+    evento.stopPropagation();
+    modalApoioKMC.style.display = "flex";
+    document.getElementById("kmc-coffee-close").focus();
+});
+document.getElementById("kmc-coffee-close").addEventListener("click", evento => {
+    evento.stopPropagation();
+    fecharApoioKMC();
+});
+modalApoioKMC.addEventListener("click", evento => {
+    if (evento.target === modalApoioKMC) fecharApoioKMC();
+});
+modalApoioKMC.addEventListener("keydown", evento => {
+    if (evento.key !== "Tab") return;
+    const focaveis = modalApoioKMC.querySelectorAll('button:not([disabled]), a[href]');
+    const primeiro = focaveis[0];
+    const ultimo = focaveis[focaveis.length - 1];
+    if (evento.shiftKey && document.activeElement === primeiro) {
+        evento.preventDefault();
+        ultimo.focus();
+    } else if (!evento.shiftKey && document.activeElement === ultimo) {
+        evento.preventDefault();
+        primeiro.focus();
+    }
+});
+document.addEventListener("keydown", evento => {
+    if (evento.key === "Escape" && modalApoioKMC.style.display === "flex") {
+        fecharApoioKMC();
+    }
 });
 
 gifPainel.addEventListener(
