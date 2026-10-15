@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KICKShot",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "browser_specific_settings": {
     "gecko": {
       "id": "kickshot@darkartz75",
@@ -20,6 +20,12 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/qr-vaquinha-livepix-gg.png"],
+      "matches": ["https://kick.com/*"]
+    }
+  ],
   "host_permissions": [
     "https://catbox.moe/*",
     "https://files.catbox.moe/*",
