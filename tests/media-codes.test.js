@@ -22,6 +22,95 @@ test("não codifica links fora do domínio HTTPS permitido", () => {
     assert.equal(codificarImagem("https://example.com/image.png"), null);
 });
 
+test("usa link direto como alternativa para nomes válidos do Catbox fora do formato curto", () => {
+    for (const mediaCodes of mediaCodesModules) {
+        const codigo = mediaCodes.codificarImagem("https://files.catbox.moe/nome%20com%20espaço%21.png");
+        assert.ok(codigo.startsWith("img:https%3A%2F%2Ffiles.catbox.moe%2F"));
+        assert.match(codigo, /^img:https%3A%2F%2F[A-Za-z0-9%._~-]+$/);
+        assert.deepEqual(mediaCodes.separarMensagemComMidia("legenda " + codigo), {
+            antes: "legenda",
+            codigo,
+            depois: ""
+        });
+    }
+});
+
+test("os dois pacotes enviam imagem ao Catbox e retornam um endereço validado", async () => {
+    for (const arquivo of ["../background.js", "../Firefox/background.js"]) {
+        const listeners = [];
+        let urlEnviada;
+        const evento = { addListener() {} };
+        const chromeApi = {
+            runtime: {
+                onMessage: { addListener: listener => listeners.push(listener) },
+                onInstalled: evento,
+                onStartup: evento
+            },
+            tabs: { onUpdated: evento, query: async () => [] },
+            scripting: { executeScript: async () => {} }
+        };
+
+        vm.runInNewContext(fs.readFileSync(path.join(__dirname, arquivo), "utf8"), {
+            chrome: chromeApi,
+            URL,
+            AbortController,
+            Blob,
+            FormData,
+            atob,
+            setTimeout,
+            clearTimeout,
+            fetch: async (url, options) => {
+                urlEnviada = String(url);
+                assert.equal(options.method, "POST");
+                return { ok: true, status: 200, text: async () => "https://files.catbox.moe/image_123.png\n" };
+            },
+            console: { warn() {}, error() {} }
+        });
+
+        const listener = listeners[0];
+        assert.ok(listener, `handler de upload ausente em ${arquivo}`);
+        const resposta = await new Promise(resolve => {
+            assert.equal(listener(
+                { tipo: "KMC_UPLOAD_IMAGEM", dadosBase64: "aGVsbG8=", mime: "image/png", nome: "imagem.png" },
+                { url: "https://kick.com/dark01i" },
+                resolve
+            ), true);
+        });
+
+        assert.equal(urlEnviada, "https://catbox.moe/user/api.php");
+        assert.deepEqual(JSON.parse(JSON.stringify(resposta)), {
+            sucesso: true,
+            url: "https://files.catbox.moe/image_123.png"
+        });
+    }
+});
+
+test("os handlers de upload rejeitam páginas que não são da Kick", () => {
+    for (const arquivo of ["../background.js", "../Firefox/background.js"]) {
+        const listeners = [];
+        const evento = { addListener() {} };
+        vm.runInNewContext(fs.readFileSync(path.join(__dirname, arquivo), "utf8"), {
+            chrome: {
+                runtime: {
+                    onMessage: { addListener: listener => listeners.push(listener) },
+                    onInstalled: evento,
+                    onStartup: evento
+                },
+                tabs: { onUpdated: evento, query: async () => [] },
+                scripting: { executeScript: async () => {} }
+            },
+            URL,
+            console: { warn() {}, error() {} }
+        });
+
+        assert.equal(listeners[0](
+            { tipo: "KMC_UPLOAD_IMAGEM", dadosBase64: "aGVsbG8=", mime: "image/png", nome: "imagem.png" },
+            { url: "https://example.com/" },
+            () => assert.fail("não deve responder fora da Kick")
+        ), false);
+    }
+});
+
 test("decodifica códigos curtos para links do Catbox", () => {
     assert.equal(decodificarImagem("image_123_webm"), "https://files.catbox.moe/image_123.webm");
 });
@@ -56,12 +145,9 @@ test("adiciona _GIF aos GIFs Tenor e mantém compatibilidade com códigos antigo
         assert.equal(mediaCodes.decodificarCodigoTenor("tnr:tenor123.GIF"), "tenor123");
         assert.equal(mediaCodes.codificarCodigoTenor("id com espaço"), null);
         const mensagem = mediaCodes.montarMensagemComMidia("olha isso", codigoNovo);
-        assert.equal(mensagem, "olha isso tnr:tenor123_GIF");
-        assert.deepEqual(mediaCodes.separarMensagemComMidia(mensagem), {
-            antes: "olha isso",
-            codigo: codigoNovo,
-            depois: ""
-        });
+        assert.ok(mensagem.startsWith("olha isso collectiblespeepoJAM "));
+        assert.equal(mediaCodes.decodificarCodigoInvisivel(mensagem), codigoNovo);
+        assert.equal(mediaCodes.removerCodigoInvisivel(mensagem), "olha isso");
     }
 });
 
@@ -75,6 +161,35 @@ test("normaliza os códigos Tenor com _GIF em ambos os content scripts", () => {
     }
 });
 
+test("extrai o ID real do endereço direto de imagem do GIPHY nos dois navegadores", () => {
+    for (const arquivo of ["../content.js", "../Firefox/content.js"]) {
+        const source = fs.readFileSync(path.join(__dirname, arquivo), "utf8");
+        const start = source.indexOf("function converterEnderecoParaTag");
+        const end = source.indexOf("\nfunction limparPreviewImagem", start);
+        assert.ok(start >= 0 && end > start, `conversor ausente em ${arquivo}`);
+        const conversor = vm.runInNewContext(`(${source.slice(start, end)})`, {
+            URL,
+            encodeURIComponent,
+            codificarCodigoGiphy: id => mediaCodesModules[0].codificarCodigoGiphy(id),
+            codificarCodigoTenor: id => mediaCodesModules[0].codificarCodigoTenor(id),
+            decodificarCodigoTenor: codigo => mediaCodesModules[0].decodificarCodigoTenor(codigo),
+            salvarLinkOriginal() {}
+        });
+
+        assert.equal(
+            conversor("https://media.giphy.com/media/gifABC123/giphy.gif"),
+            "gph:gifABC123_GIF"
+        );
+        assert.equal(
+            conversor("https://media.giphy.com/media/v1.token123/gifABC123/giphy.gif"),
+            "gph:gifABC123_GIF"
+        );
+        const urlDireta = "https://media.giphy.com/media/v1.token123/giphy.gif";
+        const codigoDireto = conversor(urlDireta);
+        assert.ok(codigoDireto.startsWith("img:https%3A%2F%2F"));
+        assert.equal(decodeURIComponent(codigoDireto.slice(4)), urlDireta);
+    }
+});
 test("usa o código GIPHY terminado em _GIF na busca, prévia e leitura do chat", () => {
     for (const arquivo of ["../content.js", "../Firefox/content.js"]) {
         const contentScript = fs.readFileSync(path.join(__dirname, arquivo), "utf8");
@@ -120,34 +235,34 @@ test("não marca o content script como iniciado antes de validar o módulo", () 
 
 test("coloca a mensagem opcional antes do código da mídia", () => {
     const mensagem = montarMensagemComMidia("  mensagem  ", "KMCIMG_nw2hdp_png");
-    assert.equal(mensagem, "mensagem KMCIMG_nw2hdp_png");
-    assert.deepEqual(separarMensagemComMidia(mensagem), {
-        antes: "mensagem",
-        codigo: "KMCIMG_nw2hdp_png",
-        depois: ""
-    });
+    assert.ok(mensagem.startsWith("mensagem collectiblespeepoJAM "));
+    assert.equal(mediaCodesModules[0].decodificarCodigoInvisivel(mensagem), "KMCIMG_nw2hdp_png");
+    assert.equal(mediaCodesModules[0].removerCodigoInvisivel(mensagem), "mensagem");
 });
 
-test("envia somente o código da mídia sem inserir texto adicional", () => {
+test("usa collectiblespeepoJAM como fallback para os formatos de mídia reconhecidos", () => {
     for (const mediaCodes of mediaCodesModules) {
-        const mensagemGif = mediaCodes.montarMensagemComMidia("", "gph:UCl0NcfQEPPTOoiezU_GIF");
-        const mensagemImagem = mediaCodes.montarMensagemComMidia("", "KMC_image_123_png_IMG");
-        assert.equal(mensagemGif, "gph:UCl0NcfQEPPTOoiezU_GIF");
-        assert.equal(mensagemImagem, "KMC_image_123_png_IMG");
+        for (const codigo of [
+            "gph:UCl0NcfQEPPTOoiezU_GIF",
+            "tnr:3fPxP8_e45wAAAAM_GIF",
+            "KMC_image_123_png_IMG",
+            "KMCIMG_nw2hdp_png",
+            "KMCGIF_TNR_tenor123_GIF",
+            "img:https%3A%2F%2Ffiles.catbox.moe%2Fimage.png"
+        ]) {
+            const mensagem = mediaCodes.montarMensagemComMidia("", codigo);
+            assert.ok(mensagem.startsWith("collectiblespeepoJAM "), codigo);
+            assert.ok(!mensagem.includes(codigo), codigo);
+            assert.equal(mediaCodes.decodificarCodigoInvisivel(mensagem), codigo);
+            assert.equal(mediaCodes.removerCodigoInvisivel(mensagem), "");
+        }
+
         assert.equal(mediaCodes.decodificarCodigoGiphy("gph:UCl0NcfQEPPTOoiezUÉUMGIFCARALHO_GIF"), null);
         assert.equal(mediaCodes.decodificarCodigoImagem("KMC_image_123_pngÉUMAIMAGEMCARALHO_IMG"), null);
-        assert.deepEqual(mediaCodes.separarMensagemComMidia(mensagemGif), {
-            antes: "",
-            codigo: "gph:UCl0NcfQEPPTOoiezU_GIF",
-            depois: ""
-        });
         const mensagemComLegenda = mediaCodes.montarMensagemComMidia("olha isso", "tnr:gif123");
-        assert.equal(mensagemComLegenda, "olha isso tnr:gif123");
-        assert.deepEqual(mediaCodes.separarMensagemComMidia(mensagemComLegenda), {
-            antes: "olha isso",
-            codigo: "tnr:gif123",
-            depois: ""
-        });
+        assert.ok(mensagemComLegenda.startsWith("olha isso collectiblespeepoJAM "));
+        assert.equal(mediaCodes.decodificarCodigoInvisivel(mensagemComLegenda), "tnr:gif123");
+        assert.equal(mediaCodes.removerCodigoInvisivel(mensagemComLegenda), "olha isso");
     }
 });
 
@@ -317,8 +432,10 @@ test("calcula hash SHA-256 da mídia permitida nos backgrounds Chrome e Firefox"
 test("preserva o envio da mídia sem texto opcional", () => {
     const imagem = montarMensagemComMidia("", "KMCIMG_nw2hdp_png");
     const gif = montarMensagemComMidia("   ", "tnr:gif123");
-    assert.equal(imagem, "KMCIMG_nw2hdp_png");
-    assert.equal(gif, "tnr:gif123");
+    assert.ok(imagem.startsWith("collectiblespeepoJAM "));
+    assert.ok(gif.startsWith("collectiblespeepoJAM "));
+    assert.equal(mediaCodesModules[0].decodificarCodigoInvisivel(imagem), "KMCIMG_nw2hdp_png");
+    assert.equal(mediaCodesModules[0].decodificarCodigoInvisivel(gif), "tnr:gif123");
 });
 
 test("separa o texto antes e depois do código da mídia", () => {
