@@ -1,7 +1,7 @@
 if (!globalThis.KICKShotMediaCodes) {
     throw new Error("KICKShot: módulo de códigos de mídia não foi carregado.");
 }
-const { codificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, montarMensagemComMidia, separarMensagemComMidia } = globalThis.KICKShotMediaCodes;
+const { codificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, codificarCodigoInvisivel, decodificarCodigoInvisivel, removerCodigoInvisivel, montarMensagemComMidia, separarMensagemComMidia } = globalThis.KICKShotMediaCodes;
 const SELETOR_CAMPO_EDITAVEL = 'textarea, input, [contenteditable]:not([contenteditable="false"]), [role="textbox"]';
 const codigosColadosRecentementeKMC = new Map();
 let codigoColadoAguardandoEnvioKMC = false;
@@ -1456,6 +1456,19 @@ function converterEnderecoParaTag(valor) {
 
     let resultado =
         valor.match(
+            /(?:https?:\/\/)?(?:media|i)\.giphy\.com\/media\/v1\.[^/?#]+\/([A-Za-z0-9_-]+)(?:\/|$)/i
+        );
+
+    if (resultado) {
+        const tag = codificarCodigoGiphy(resultado[1]);
+        if (tag) {
+            salvarLinkOriginal(tag, valor);
+            return tag;
+        }
+    }
+
+    resultado =
+        valor.match(
             /giphy\.com\/media\/([A-Za-z0-9_-]+)(?:[/?#]|$)/i
         );
 
@@ -1498,7 +1511,7 @@ function converterEnderecoParaTag(valor) {
 
     resultado =
         valor.match(
-            /(?:https?:\/\/)?(?:media|i)\.giphy\.com\/(?:media\/)?([A-Za-z0-9_-]+)(?:\/|$)/i
+            /(?:https?:\/\/)?(?:media|i)\.giphy\.com\/(?:media\/)?((?!media(?:\/|$)|v1(?:\.|\/|$))[A-Za-z0-9_-]+)(?:\/|$)/i
         );
 
     if (resultado) {
@@ -1538,6 +1551,23 @@ function converterEnderecoParaTag(valor) {
         return tag;
     }
 
+    // Alguns endereços diretos recentes do GIPHY usam tokens em vez do ID antigo.
+    // Nesses casos, compartilhe o próprio GIF pelo domínio oficial do CDN.
+    try {
+        const enderecoGiphy = new URL(valor);
+        if (
+            enderecoGiphy.protocol === "https:" &&
+            /^(?:media\d*|i)\.giphy\.com$/i.test(enderecoGiphy.hostname) &&
+            /\.gif$/i.test(enderecoGiphy.pathname)
+        ) {
+            const urlCodificada = encodeURIComponent(enderecoGiphy.href).replace(/[!'()*]/g, caractere =>
+                "%" + caractere.charCodeAt(0).toString(16).toUpperCase()
+            );
+            return "img:" + urlCodificada;
+        }
+    } catch (erro) {
+        // Continua tentando os formatos conhecidos abaixo.
+    }
     resultado =
         valor.match(
             /(?:https?:\/\/)?media\.tenor\.com\/([A-Za-z0-9_-]+)(?:\/|$)/i
@@ -2164,7 +2194,7 @@ function atualizarLinkColado() {
     } else if (/^img:https%3A/i.test(tag)) {
         try {
             const url = decodeURIComponent(tag.slice(4));
-            if (/^https:\/\/files\.catbox\.moe\//i.test(url)) {
+            if (/^https:\/\/files\.catbox\.moe\//i.test(url) || /^https:\/\/(?:media\d*|i)\.giphy\.com\/.+\.gif(?:[?#]|$)/i.test(url)) {
                 media = criarImagemEnviada(url);
             }
         } catch (erro) {
@@ -3623,14 +3653,12 @@ function processarElementoGif(elemento) {
         return false;
     }
 
-    if (
-        elemento.querySelector &&
-        elemento.querySelector(
-            "img, video, picture, source"
-        )
-    ) {
-        return false;
-    }
+    // O código invisível só pode ser interpretado no span da mensagem.
+    // A varredura também visita divs ancestrais; decodificar o textContent
+    // deles poderia substituir um bloco inteiro da página pelo GIF.
+    const podeTerLegenda = elemento.tagName === "SPAN" &&
+        elemento.classList.contains("font-normal") &&
+        !elemento.querySelector("span.font-normal");
 
     let texto =
         (elemento.textContent || "")
@@ -3638,9 +3666,19 @@ function processarElementoGif(elemento) {
 
     let legenda = { antes: "", depois: "" };
 
+    const codigoInvisivel = podeTerLegenda ? decodificarCodigoInvisivel(texto) : null;
+    if (codigoInvisivel) {
+        legenda = { antes: removerCodigoInvisivel(texto).trim(), depois: "" };
+        texto = codigoInvisivel;
+    } else if (
+        elemento.querySelector &&
+        elemento.querySelector("img, video, picture, source")
+    ) {
+        return false;
+    }
+
     // A legenda só pode ser lida no span do conteúdo da mensagem da Kick.
     // Em divs maiores o texto também contém o nome do usuário e outras mensagens.
-    const podeTerLegenda = elemento.tagName === "SPAN" && elemento.classList.contains("font-normal");
     const mensagemComMidia = podeTerLegenda ? separarMensagemComMidia(texto) : null;
     if (mensagemComMidia) {
         legenda = { antes: mensagemComMidia.antes, depois: mensagemComMidia.depois };
@@ -3734,9 +3772,7 @@ function processarElementoGif(elemento) {
             );
 
         if (
-            !/^https:\/\/files\.catbox\.moe\//i.test(
-                url
-            )
+            !/^https:\/\/files\.catbox\.moe\//i.test(url) && !/^https:\/\/(?:media\d*|i)\.giphy\.com\/.+\.gif(?:[?#]|$)/i.test(url)
         ) {
             return false;
         }
