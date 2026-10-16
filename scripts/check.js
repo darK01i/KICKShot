@@ -52,8 +52,23 @@ for (const arquivo of manifestos) {
         if (!manifesto.version || !manifesto.name) {
             erros.push(`${arquivo}: faltam nome ou versão.`);
         }
+
+        const hosts = new Set(manifesto.host_permissions || []);
+        for (const host of ["https://api.klipy.com/*", "https://static.klipy.com/*", "https://static1.klipy.com/*", "https://static2.klipy.com/*"]) {
+            if (!hosts.has(host)) erros.push(`${arquivo}: falta permissão para ${host}.`);
+        }
+        if (!(manifesto.permissions || []).includes("storage")) {
+            erros.push(`${arquivo}: falta permissão de armazenamento local para o identificador da KLIPY.`);
+        }
     } catch (erro) {
         erros.push(`${arquivo}: ${erro.message}`);
+    }
+}
+
+for (const arquivo of ["klipy-config.js", "Firefox/klipy-config.js"]) {
+    const caminho = path.join(raiz, arquivo);
+    if (!fs.existsSync(caminho) || !/KICKSHOT_KLIPY_APP_KEY\s*=\s*["'][A-Za-z0-9_-]{30,100}["']/.test(fs.readFileSync(caminho, "utf8"))) {
+        erros.push(`${arquivo}: chave de produção KLIPY não configurada.`);
     }
 }
 
