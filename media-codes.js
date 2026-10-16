@@ -78,9 +78,7 @@
 
     function decodificarCodigoGiphy(codigo) {
         if (typeof codigo !== "string") return null;
-        const id = codigo
-            .replace(/^gph:/i, "")
-            .replace(/[._]GIF$/i, "");
+        const id = codigo.replace(/^gph:/i, "").replace(/[._]GIF$/i, "");
         return /^gph:/i.test(codigo) && /^[A-Za-z0-9_-]+$/.test(id) ? id : null;
     }
 
@@ -97,6 +95,47 @@
         return /^tnr:/i.test(codigo) && /^[A-Za-z0-9_.-]+$/.test(id) ? id : null;
     }
 
+    const HOSTS_KLIPY = new Set(["static.klipy.com", "static1.klipy.com", "static2.klipy.com"]);
+
+    function validarUrlKlipy(url) {
+        try {
+            const endereco = new URL(url);
+            return endereco.protocol === "https:" && HOSTS_KLIPY.has(endereco.hostname.toLowerCase()) && !endereco.username && !endereco.password;
+        } catch (erro) {
+            return false;
+        }
+    }
+
+    function codificarCodigoKlipy(url, slug) {
+        if (typeof url !== "string" || !validarUrlKlipy(url)) return null;
+        if (typeof slug === "string" && /^[A-Za-z0-9_-]{1,160}$/.test(slug)) return "klp:" + slug;
+        const bytes = new TextEncoder().encode(url);
+        let binario = "";
+        for (const byte of bytes) binario += String.fromCharCode(byte);
+        const token = btoa(binario).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+        return token.length <= 1800 ? "klp:" + token : null;
+    }
+
+    function decodificarCodigoKlipy(codigo) {
+        if (typeof codigo !== "string" || !/^klp:[A-Za-z0-9_-]+$/i.test(codigo)) return null;
+        try {
+            let base64 = codigo.slice(4).replace(/-/g, "+").replace(/_/g, "/");
+            base64 += "=".repeat((4 - base64.length % 4) % 4);
+            const binario = atob(base64);
+            const bytes = Uint8Array.from(binario, caractere => caractere.charCodeAt(0));
+            const url = new TextDecoder().decode(bytes);
+            return validarUrlKlipy(url) ? url : null;
+        } catch (erro) {
+            return null;
+        }
+    }
+
+    function extrairSlugCodigoKlipy(codigo) {
+        if (typeof codigo !== "string" || !/^klp:[A-Za-z0-9_-]{1,160}$/i.test(codigo)) return null;
+        if (decodificarCodigoKlipy(codigo)) return null;
+        return codigo.slice(4);
+    }
+
     const MARCADOR_INVISIVEL = "\u2063";
     const ZERO = "\u200b";
     const UM = "\u200c";
@@ -104,7 +143,7 @@
 
     function codigoDeMidiaSuportado(codigo) {
         if (typeof codigo !== "string" || codigo.length > 56) return false;
-        return /^(?:gph:[A-Za-z0-9_-]+(?:_GIF)?|tnr:[A-Za-z0-9_.-]+(?:[._]GIF)?|KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|img:https%3A%2F%2F[A-Za-z0-9%._~-]+)$/i.test(codigo);
+        return /^(?:gph:[A-Za-z0-9_-]+(?:_GIF)?|tnr:[A-Za-z0-9_.-]+(?:[._]GIF)?|klp:[A-Za-z0-9_-]{1,160}|KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|img:https%3A%2F%2F[A-Za-z0-9%._~-]+)$/i.test(codigo);
     }
 
     function codificarCodigoInvisivel(codigo) {
@@ -157,8 +196,8 @@
 
     function separarMensagemComMidia(texto) {
         const mensagem = String(texto || "");
-        const prefixosCodigo = /^(?:KMC_|KMCIMG_|KMCGIF_TNR_|gph:|tnr:|img:https%3A%2F%2F)/i;
-        const formatoCodigo = /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|img:https%3A%2F%2F[A-Za-z0-9%._~-]+)$/i;
+        const prefixosCodigo = /^(?:KMC_|KMCIMG_|KMCGIF_TNR_|tnr:|klp:|img:https%3A%2F%2F)/i;
+        const formatoCodigo = /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]{1,1800}|img:https%3A%2F%2F[A-Za-z0-9%._~-]+)$/i;
         const tokens = [...mensagem.matchAll(/\S+/g)];
         for (const token of tokens) {
             if (!prefixosCodigo.test(token[0])) continue;
@@ -173,5 +212,5 @@
         return null;
     }
 
-    return Object.freeze({ codificarImagem, decodificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, codificarCodigoInvisivel, decodificarCodigoInvisivel, removerCodigoInvisivel, montarMensagemComMidia, separarMensagemComMidia });
+    return Object.freeze({ codificarImagem, decodificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, codificarCodigoKlipy, decodificarCodigoKlipy, extrairSlugCodigoKlipy, codificarCodigoInvisivel, decodificarCodigoInvisivel, removerCodigoInvisivel, montarMensagemComMidia, separarMensagemComMidia });
 });

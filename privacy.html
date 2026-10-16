@@ -17,31 +17,31 @@
 </head>
 <body>
   <h1>Política de Privacidade da KICKShot</h1>
-  <p class="updated">Atualizada em 15 de outubro de 2026</p>
+  <p class="updated">Atualizada em 16 de outubro de 2026</p>
   <p>A KICKShot é uma extensão independente para compartilhar e visualizar imagens e GIFs nos chats da Kick. Esta política explica quais informações a extensão processa e quais serviços externos utiliza.</p>
 
   <h2>Informações processadas no navegador</h2>
   <p>Enquanto você usa o chat da Kick, a extensão verifica o conteúdo carregado na conversa para encontrar códigos de mídia compatíveis e exibir as imagens ou GIFs correspondentes. Essa leitura e conversão acontecem localmente no navegador. A KICKShot não envia o histórico do chat, nomes de usuários ou mensagens ao desenvolvedor.</p>
-  <p>A extensão guarda no armazenamento local do navegador links originais associados a mídias e códigos de mídias bloqueadas, impressões digitais SHA-256 das mídias bloqueadas e as posições escolhidas para os painéis. Quando você bloqueia uma mídia, a extensão também pode baixar o arquivo do serviço que o hospeda para calcular uma impressão digital no navegador. Essa impressão digital é guardada localmente para reconhecer o mesmo arquivo mesmo se ele aparecer com outro código ou link. O arquivo, as posições e as impressões digitais não são enviados ao desenvolvedor da KICKShot. Esses dados locais podem ser removidos apagando os dados do site Kick no navegador.</p>
+  <p>A extensão guarda no armazenamento local do navegador links originais associados a mídias e códigos de mídias bloqueadas, impressões digitais SHA-256 das mídias bloqueadas e as posições escolhidas para os painéis. Quando você bloqueia uma mídia, a extensão também pode baixar o arquivo do serviço que o hospeda para calcular uma impressão digital no navegador. Essa impressão digital é guardada localmente para reconhecer o mesmo arquivo mesmo se ele aparecer com outro código ou link. O arquivo, as posições e as impressões digitais não são enviados ao desenvolvedor da KICKShot. O identificador aleatório usado pela KLIPY fica no armazenamento da extensão e é removido ao limpar os dados da extensão ou desinstalá-la.</p>
 
   <h2>Serviços externos</h2>
   <ul>
     <li><strong>Catbox:</strong> ao enviar uma imagem, o arquivo é transferido ao Catbox para hospedagem e o link retornado é compartilhado no chat. O Catbox informa que arquivos enviados ficam publicamente acessíveis e podem permanecer disponíveis por tempo indeterminado; também pode registrar o endereço IP e informações do arquivo. O Catbox informa que não remove metadados EXIF. Consulte a <a href="https://catbox.moe/legal.php">política e os termos do Catbox</a>.</li>
-    <li><strong>Busca KLIPY:</strong> quando você busca GIFs, o termo é enviado diretamente à API da KLIPY. A extensão envia também um identificador aleatório armazenado localmente para associar buscas e compartilhamentos; ele não é o nome da sua conta da Kick. Ao escolher e enviar um GIF, o identificador do GIF e o termo da busca podem ser enviados à KLIPY para registrar o compartilhamento. A KLIPY e provedores de rede podem processar o endereço IP e dados técnicos da conexão. Consulte a <a href="https://docs.klipy.com/">documentação e as regras de uso da API da KLIPY</a>.</li>
-    <li><strong>GIPHY, Tenor e Catbox:</strong> mídias compatíveis no chat são carregadas diretamente dos servidores desses serviços. Ao bloquear uma mídia, a extensão pode solicitá-la novamente ao servidor de origem para compará-la com bloqueios salvos; a comparação acontece localmente no navegador. Consulte também os <a href="https://www.tenor.com/legal-terms">termos do Tenor</a>.</li>
+    <li><strong>Busca KLIPY:</strong> quando você busca GIFs, o termo é enviado diretamente à API da KLIPY. A extensão também envia um identificador aleatório persistente, armazenado localmente, para associar buscas e compartilhamentos; ele não é o nome da sua conta da Kick. Ao escolher e enviar um GIF, o identificador do GIF e o termo da busca podem ser enviados à KLIPY para registrar o compartilhamento. A KLIPY e provedores de rede podem processar o endereço IP e dados técnicos da conexão. Consulte a <a href="https://docs.klipy.com/">documentação e as regras de uso da API da KLIPY</a>.</li>
+    <li><strong>GIPHY, KLIPY, Tenor e Catbox:</strong> GIFs e imagens compatíveis no chat são carregados diretamente dos servidores desses serviços. A extensão não pesquisa no GIPHY nem envia buscas para ele; links e códigos GIPHY já presentes no chat são apenas convertidos em GIFs para exibição. Ao bloquear uma mídia, a extensão pode solicitá-la novamente ao servidor de origem para compará-la com bloqueios salvos; a comparação acontece localmente no navegador. Consulte também os <a href="https://www.tenor.com/legal-terms">termos do Tenor</a>.</li>
     <li><strong>7TV:</strong> a figurinha decorativa do botão e da tela de apoio é carregada diretamente do CDN do 7TV, que pode receber dados técnicos da conexão, como o endereço IP.</li>
     <li><strong>LivePix:</strong> ao abrir o link da campanha ou escanear o QR Code, você acessa o site do LivePix, que processa os dados conforme a própria política de privacidade.</li>
     <li><strong>Kick:</strong> a extensão funciona dentro do site da Kick e transforma códigos compatíveis em mídia exibida no chat. Consulte a <a href="https://kick.com/privacy-policy">política de privacidade da Kick</a>.</li>
   </ul>
 
   <h2>Dados que a KICKShot não coleta</h2>
-  <p>A KICKShot não cria perfis de usuário, não usa publicidade ou analytics e não recebe cópias das imagens ou conversas. O servidor intermediário é usado somente para a busca de GIFs e não foi projetado para armazenar os termos pesquisados. Os uploads são enviados diretamente ao Catbox.</p>
+  <p>A KICKShot não cria perfis de usuário, não usa publicidade ou analytics próprios e não recebe cópias das imagens ou conversas. Os termos de busca e um identificador aleatório são enviados diretamente à KLIPY, conforme descrito acima. Os uploads são enviados diretamente ao Catbox.</p>
 
   <h2>Suas escolhas</h2>
   <p>Enviar uma imagem transfere o arquivo escolhido ao Catbox e publica o link no chat. Se não quiser que isso aconteça, não use esse recurso. Evite enviar imagens privadas ou que você não tenha direito de compartilhar.</p>
 
   <h2>Alterações e contato</h2>
   <p>Esta política poderá ser atualizada conforme a extensão ou os serviços mudem. Para dúvidas de privacidade ou suporte, use o contato informado na página da KICKShot na loja de extensões.</p>
-  <p>A KICKShot é independente e não é afiliada à Kick, ao GIPHY, ao Tenor ou ao Catbox.</p>
+  <p>A KICKShot é independente e não é afiliada à Kick, ao GIPHY, à KLIPY, ao Tenor ou ao Catbox.</p>
 </body>
 </html>

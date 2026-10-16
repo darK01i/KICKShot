@@ -5,6 +5,6 @@ Recursos
 - Envio de imagens escolhidas pelo usuário para hospedagem no Catbox.
 - Texto opcional antes da imagem ou GIF enviado.
 - Visualização de imagens e GIFs compatíveis compartilhados no chat.
-- Busca de GIFs no GIPHY e seleção para compartilhar no chat.
+- Busca de GIFs na KLIPY e seleção para compartilhar no chat. A busca envia o termo e um identificador aleatório à KLIPY para retornar resultados e registrar o compartilhamento escolhido.
 - Compartilhamento de GIFs ao colar um link compatível.
- A KICKShot não é afiliada à Kick, ao GIPHY, ao Tenor ou ao Catbox.
+ A KICKShot não é afiliada à Kick, à KLIPY, ao Tenor ou ao Catbox.
