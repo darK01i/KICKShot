@@ -11,24 +11,8 @@
         try {
             const endereco = new URL(url);
             if (endereco.protocol !== "https:" || endereco.hostname !== "files.catbox.moe") return null;
-            const caminho = endereco.pathname.replace(/^\/+/, "");
-            if (!caminho) return null;
-
-            let nomeArquivo;
-            try {
-                nomeArquivo = decodeURIComponent(caminho);
-            } catch (erro) {
-                nomeArquivo = "";
-            }
-
-            // Use o formato curto quando o nome puder ser representado sem ambiguidade.
-            if (!/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9]{1,10})?$/.test(nomeArquivo)) {
-                // Links válidos do Catbox com nomes fora do formato curto ainda podem ser exibidos.
-                const linkCodificado = encodeURIComponent(endereco.href).replace(/[!'()*]/g, caractere =>
-                    "%" + caractere.charCodeAt(0).toString(16).toUpperCase()
-                );
-                return "img:" + linkCodificado;
-            }
+            const nomeArquivo = decodeURIComponent(endereco.pathname.slice(1));
+            if (!/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9]{1,10})?$/.test(nomeArquivo)) return null;
             // Evita que a Kick transforme o tipo da mídia em link.
             const extensaoTipo = /\.gif$/i.test(nomeArquivo) ? "_GIF" : "_IMG";
             return "KMC_" + nomeArquivo.replace(/\./g, "_") + extensaoTipo;
@@ -78,7 +62,9 @@
 
     function decodificarCodigoGiphy(codigo) {
         if (typeof codigo !== "string") return null;
-        const id = codigo.replace(/^gph:/i, "").replace(/[._]GIF$/i, "");
+        const id = codigo
+            .replace(/^gph:/i, "")
+            .replace(/[._]GIF$/i, "");
         return /^gph:/i.test(codigo) && /^[A-Za-z0-9_-]+$/.test(id) ? id : null;
     }
 
@@ -95,109 +81,15 @@
         return /^tnr:/i.test(codigo) && /^[A-Za-z0-9_.-]+$/.test(id) ? id : null;
     }
 
-    const HOSTS_KLIPY = new Set(["static.klipy.com", "static1.klipy.com", "static2.klipy.com"]);
-
-    function validarUrlKlipy(url) {
-        try {
-            const endereco = new URL(url);
-            return endereco.protocol === "https:" && HOSTS_KLIPY.has(endereco.hostname.toLowerCase()) && !endereco.username && !endereco.password;
-        } catch (erro) {
-            return false;
-        }
-    }
-
-    function codificarCodigoKlipy(url, slug) {
-        if (typeof url !== "string" || !validarUrlKlipy(url)) return null;
-        if (typeof slug === "string" && /^[A-Za-z0-9_-]{1,160}$/.test(slug)) return "klp:" + slug;
-        const bytes = new TextEncoder().encode(url);
-        let binario = "";
-        for (const byte of bytes) binario += String.fromCharCode(byte);
-        const token = btoa(binario).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-        return token.length <= 1800 ? "klp:" + token : null;
-    }
-
-    function decodificarCodigoKlipy(codigo) {
-        if (typeof codigo !== "string" || !/^klp:[A-Za-z0-9_-]+$/i.test(codigo)) return null;
-        try {
-            let base64 = codigo.slice(4).replace(/-/g, "+").replace(/_/g, "/");
-            base64 += "=".repeat((4 - base64.length % 4) % 4);
-            const binario = atob(base64);
-            const bytes = Uint8Array.from(binario, caractere => caractere.charCodeAt(0));
-            const url = new TextDecoder().decode(bytes);
-            return validarUrlKlipy(url) ? url : null;
-        } catch (erro) {
-            return null;
-        }
-    }
-
-    function extrairSlugCodigoKlipy(codigo) {
-        if (typeof codigo !== "string" || !/^klp:[A-Za-z0-9_-]{1,160}$/i.test(codigo)) return null;
-        if (decodificarCodigoKlipy(codigo)) return null;
-        return codigo.slice(4);
-    }
-
-    const MARCADOR_INVISIVEL = "\u2063";
-    const ZERO = "\u200b";
-    const UM = "\u200c";
-    const EMOTE_MIDIA_FALLBACK = "collectiblespeepoJAM";
-
-    function codigoDeMidiaSuportado(codigo) {
-        if (typeof codigo !== "string" || codigo.length > 56) return false;
-        return /^(?:gph:[A-Za-z0-9_-]+(?:_GIF)?|tnr:[A-Za-z0-9_.-]+(?:[._]GIF)?|klp:[A-Za-z0-9_-]{1,160}|KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|img:https%3A%2F%2F[A-Za-z0-9%._~-]+)$/i.test(codigo);
-    }
-
-    function codificarCodigoInvisivel(codigo) {
-        if (!codigoDeMidiaSuportado(codigo)) return "";
-        let bits = "";
-        for (const caractere of codigo) {
-            const byte = caractere.charCodeAt(0);
-            for (let deslocamento = 7; deslocamento >= 0; deslocamento--) {
-                bits += byte & (1 << deslocamento) ? UM : ZERO;
-            }
-        }
-        return MARCADOR_INVISIVEL + bits + MARCADOR_INVISIVEL;
-    }
-
-    function decodificarCodigoInvisivel(texto) {
-        if (typeof texto !== "string") return null;
-        const encontrado = texto.match(/\u2063([\u200b\u200c]+)\u2063/);
-        if (!encontrado || encontrado[1].length % 8 !== 0) return null;
-        const bits = encontrado[1];
-        let codigo = "";
-        for (let inicio = 0; inicio < bits.length; inicio += 8) {
-            let byte = 0;
-            for (let indice = 0; indice < 8; indice++) {
-                byte = (byte << 1) | (bits[inicio + indice] === UM ? 1 : 0);
-            }
-            codigo += String.fromCharCode(byte);
-        }
-        return codigoDeMidiaSuportado(codigo) ? codigo : null;
-    }
-
-    function removerCodigoInvisivel(texto) {
-        return typeof texto === "string"
-            ? texto
-                .replace(/\u2063[\u200b\u200c]+\u2063/g, "")
-                .replace(/\bcollectiblespeepoJAM\b/i, "")
-                .trim()
-            : "";
-    }
-
     function montarMensagemComMidia(texto, codigo) {
         const mensagem = String(texto || "").trim();
-        if (codigoDeMidiaSuportado(codigo)) {
-            const codigoInvisivel = codificarCodigoInvisivel(codigo);
-            if (codigoInvisivel) {
-                return [mensagem, EMOTE_MIDIA_FALLBACK, codigoInvisivel].filter(Boolean).join(" ");
-            }
-        }
         return mensagem ? mensagem + " " + codigo : codigo;
     }
 
     function separarMensagemComMidia(texto) {
         const mensagem = String(texto || "");
-        const prefixosCodigo = /^(?:KMC_|KMCIMG_|KMCGIF_TNR_|tnr:|klp:|img:https%3A%2F%2F)/i;
-        const formatoCodigo = /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]{1,1800}|img:https%3A%2F%2F[A-Za-z0-9%._~-]+)$/i;
+        const prefixosCodigo = /^(?:KMC_|KMCIMG_|KMCGIF_TNR_|gph:|tnr:|img:https%3A%2F%2F)/i;
+        const formatoCodigo = /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|img:https%3A%2F%2F[A-Za-z0-9%._~-]+)$/i;
         const tokens = [...mensagem.matchAll(/\S+/g)];
         for (const token of tokens) {
             if (!prefixosCodigo.test(token[0])) continue;
@@ -212,5 +104,5 @@
         return null;
     }
 
-    return Object.freeze({ codificarImagem, decodificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, codificarCodigoKlipy, decodificarCodigoKlipy, extrairSlugCodigoKlipy, codificarCodigoInvisivel, decodificarCodigoInvisivel, removerCodigoInvisivel, montarMensagemComMidia, separarMensagemComMidia });
+    return Object.freeze({ codificarImagem, decodificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, montarMensagemComMidia, separarMensagemComMidia });
 });

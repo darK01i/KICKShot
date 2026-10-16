@@ -3,7 +3,7 @@
     if (!globalThis.KICKShotMediaCodes) {
         throw new Error("KICKShot: módulo de códigos de mídia não foi carregado.");
     }
-    const { codificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, codificarCodigoKlipy, decodificarCodigoKlipy, extrairSlugCodigoKlipy, codificarCodigoInvisivel, decodificarCodigoInvisivel, removerCodigoInvisivel, montarMensagemComMidia, separarMensagemComMidia } = globalThis.KICKShotMediaCodes;
+    const { codificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, montarMensagemComMidia, separarMensagemComMidia } = globalThis.KICKShotMediaCodes;
     globalThis.__KICKSHOT_CONTENT_SCRIPT_STARTED__ = true;
 const SELETOR_CAMPO_EDITAVEL = 'textarea, input, [contenteditable]:not([contenteditable="false"]), [role="textbox"]';
 const codigosColadosRecentementeKMC = new Map();
@@ -67,7 +67,7 @@ document.addEventListener("paste", evento => {
         inserirTextoColadoKMC(alvo, texto);
     }
 
-    const codigos = texto.match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]{1,1800})/gi) || [];
+    const codigos = texto.match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+)/gi) || [];
     if (codigos.length) {
         codigoColadoAguardandoEnvioKMC = true;
         campoCodigoColadoKMC = alvo;
@@ -98,7 +98,7 @@ document.addEventListener("input", evento => {
             alvo.setAttribute("data-kmc-chat-input", "true");
         }
         const conteudo = alvo.value ?? alvo.innerText ?? alvo.textContent ?? "";
-        const codigos = String(conteudo).match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]{1,1800})/gi) || [];
+        const codigos = String(conteudo).match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+)/gi) || [];
         if (codigos.length) {
             codigoColadoAguardandoEnvioKMC = true;
             campoCodigoColadoKMC = alvo;
@@ -115,7 +115,7 @@ document.addEventListener("input", evento => {
 function liberarCodigosColadosKMC(campo) {
     if (!campo) return;
     const conteudo = campo.value ?? campo.innerText ?? campo.textContent ?? "";
-    const codigos = String(conteudo).match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]{1,1800})/gi) || [];
+    const codigos = String(conteudo).match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+)/gi) || [];
     if (!codigos.length) return;
     codigoColadoAguardandoEnvioKMC = false;
     campoCodigoColadoKMC = null;
@@ -137,7 +137,7 @@ function reconciliarProtecaoDeCodigoColadoKMC() {
     const texto = campo?.isConnected
         ? String(campo.value ?? campo.innerText ?? campo.textContent ?? "")
         : "";
-    const aindaNoCampo = /(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]{1,1800})/i.test(texto);
+    const aindaNoCampo = /(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+)/i.test(texto);
     if (aindaNoCampo) return;
 
     codigoColadoAguardandoEnvioKMC = false;
@@ -165,7 +165,7 @@ function liberarProtecaoAoDetectarMensagemKMC(elemento) {
     ) return false;
 
     const texto = elemento.textContent || "";
-    const codigos = texto.match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]{1,1800})/gi) || [];
+    const codigos = texto.match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+)/gi) || [];
     const codigoEnviado = codigos.find(codigo =>
         codigosColadosRecentementeKMC.has(codigo.toLowerCase())
     );
@@ -678,14 +678,14 @@ modalApoioKMC.innerHTML = `
     <section id="kmc-coffee-card">
         <button id="kmc-coffee-close" type="button" aria-label="Fechar">×</button>
         <h2 id="kmc-coffee-title"><span>Pague um Café</span><img src="https://cdn.7tv.app/emote/60ae4121b2ecb01505492dbe/2x.webp" alt="Peepo" width="40" height="40" loading="lazy" decoding="async" style="display:block; flex:0 0 40px; object-fit:contain; transform:translate(7px, -8px);"></h2>
-        <p id="kmc-coffee-notice"><strong>AVISO:</strong> Você pode usar a extensão normalmente, sem precisar fazer nenhuma doação!</p>
-        <p>Gostou da extensão e quer dar uma moral? Qualquer contribuição é bem-vinda, mas é totalmente opcional! Obrigado a todos que apoiam o projeto e gostam!</p>
+        <p id="kmc-coffee-notice"><strong>AVISO:</strong> Você pode usar a extensão normalmente, sem precisar fazer nenhuma doação! 💚</p>
+        <p>Estou arrecadando R$ 25 para publicar a extensão na Chrome Web Store. Se quiser apoiar o projeto e ajudar a tornar isso possível, qualquer contribuição será muito bem-vinda. Obrigado pelo apoio!</p>
         <div id="kmc-coffee-qr-wrap">
-            <img id="kmc-coffee-qr" alt="QR Code para abrir meu LivePix" width="250" height="250" loading="lazy" decoding="async">
-            <span>Quer apoiar o projeto? Escaneie o QR Code! 💚</span>
+            <img id="kmc-coffee-qr" alt="QR Code para abrir a vaquinha da KICKShot no LivePix" width="250" height="250" loading="lazy" decoding="async">
+            <span>Escaneie para abrir a vaquinha e ver o progresso.</span>
         </div>
-        <a id="kmc-coffee-link" href="https://livepix.gg/dark01i" target="_blank" rel="noopener noreferrer">Abrir meu LivePix</a>
-        <p style="margin:10px 0 0; font-size:13px;">O QR Code direciona você ao meu LivePix oficial. Escolha o valor da contribuição e faça o pagamento via Pix.</p>
+        <a id="kmc-coffee-link" href="https://vaquinha.livepix.gg/kickshot-webstore" target="_blank" rel="noopener noreferrer">Abrir vaquinha no LivePix</a>
+        <p style="margin:10px 0 0; font-size:13px;">O QR Code leva você à campanha oficial do LivePix. Após escolher o valor da contribuição, basta realizar o pagamento via Pix. O progresso da meta será atualizado quando a doação for confirmada.</p>
     </section>
 `;
 document.body.appendChild(modalApoioKMC);
@@ -715,7 +715,7 @@ gifPainel.innerHTML = `
 `;
 
 document.body.appendChild(gifPainel);
-gifPainel.insertAdjacentHTML("beforeend", '<div style="display:flex; gap:8px; margin-bottom:10px;"><div style="position:relative; flex:1;"><input id="kmc-gif-query" type="text" maxlength="80" placeholder="Buscar GIFs na KLIPY" aria-label="Buscar GIFs" style="width:100%; padding:10px 34px 10px 10px;"><button id="kmc-gif-clear" type="button" aria-label="Limpar busca" style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; padding:0 !important; border:0 !important; border-radius:50% !important; background:transparent !important; color:#fff !important; font-size:18px !important; line-height:1; align-items:center; justify-content:center; cursor:pointer;">×</button></div><button id="kmc-gif-search" type="button" style="padding:8px 12px; cursor:pointer;">Buscar</button></div><p id="kmc-gif-status" role="status" aria-live="polite" style="min-height:20px; margin:0 0 10px; color:#c4c4cc; font-size:13px;"></p><div id="kmc-gif-results" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:8px;"></div><p style="margin:12px 0 0; text-align:right; font-size:12px; color:#c4c4cc;">Powered by KLIPY</p>');
+gifPainel.insertAdjacentHTML("beforeend", '<div style="display:flex; gap:8px; margin-bottom:10px;"><div style="position:relative; flex:1;"><input id="kmc-gif-query" type="text" maxlength="80" placeholder="O que você quer encontrar?" aria-label="Buscar GIFs" style="width:100%; padding:10px 34px 10px 10px;"><button id="kmc-gif-clear" type="button" aria-label="Limpar busca" style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; padding:0 !important; border:0 !important; border-radius:50% !important; background:transparent !important; color:#fff !important; font-size:18px !important; line-height:1; align-items:center; justify-content:center; cursor:pointer;">×</button></div><button id="kmc-gif-search" type="button" style="padding:8px 12px; cursor:pointer;">Buscar</button></div><p id="kmc-gif-status" role="status" aria-live="polite" style="min-height:20px; margin:0 0 10px; color:#c4c4cc; font-size:13px;"></p><div id="kmc-gif-results" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:8px;"></div><p style="margin:12px 0 0; text-align:right; font-size:12px; color:#c4c4cc;">Powered by GIPHY</p>');
 
 function fecharPainelAnimado(painelAlvo) {
     if (painelAlvo.style.display === "none") return;
@@ -1296,12 +1296,6 @@ const resultadosGifsKMC = document.getElementById("kmc-gif-results");
 const statusBuscaGifsKMC = document.getElementById("kmc-gif-status");
 const botaoBuscarGifsKMC = document.getElementById("kmc-gif-search");
 const botaoLimparBuscaGifsKMC = document.getElementById("kmc-gif-clear");
-let gifKlipySelecionado = null;
-let paginaGifsKMC = 0;
-let temMaisGifsKMC = false;
-let carregandoGifsKMC = false;
-let consultaGifsAtualKMC = "";
-
 campoBuscaGifsKMC.addEventListener("input", () => {
     botaoLimparBuscaGifsKMC.style.display = campoBuscaGifsKMC.value ? "flex" : "none";
 });
@@ -1313,80 +1307,45 @@ botaoLimparBuscaGifsKMC.addEventListener("click", evento => {
     buscarGifsKMC();
 });
 
-function enviarMensagemRuntimeKMC(mensagem) {
-    const runtime = globalThis.browser?.runtime || globalThis.chrome?.runtime;
+function solicitarGifsKMC(consulta) {
+    const runtime = (typeof chrome !== "undefined" ? chrome.runtime : null);
     if (!runtime || typeof runtime.sendMessage !== "function") {
         return Promise.reject(new Error("Recarregue a extensão e a página da Kick."));
     }
-    return Promise.resolve(runtime.sendMessage(mensagem));
-}
 
-function solicitarGifsKMC(consulta, pagina = 1) {
-    return enviarMensagemRuntimeKMC({ tipo: "KMC_BUSCAR_GIFS", consulta, pagina }).then(resposta => {
-        if (!resposta?.sucesso) throw new Error(resposta?.erro || "Não foi possível buscar GIFs.");
-        return { gifs: Array.isArray(resposta.gifs) ? resposta.gifs : [], temMais: resposta.temMais === true };
+    return new Promise((resolve, reject) => {
+        runtime.sendMessage({ tipo: "KMC_BUSCAR_GIFS", consulta }, resposta => {
+            const erro = runtime.lastError;
+            if (erro) return reject(new Error("Falha ao acessar a busca de GIFs."));
+            if (!resposta || !resposta.sucesso) {
+                return reject(new Error(resposta && resposta.erro || "Não foi possível buscar GIFs."));
+            }
+            resolve(Array.isArray(resposta.gifs) ? resposta.gifs : []);
+        });
     });
 }
 
-const resolucoesKlipyKMC = new Map();
+async function buscarGifsKMC() {
+    if (botaoBuscarGifsKMC.disabled) return;
+    const consulta = campoBuscaGifsKMC.value.trim() || "trending";
+    resultadosGifsKMC.replaceChildren();
 
-function solicitarUrlKlipyPorSlugKMC(slug) {
-    if (resolucoesKlipyKMC.has(slug)) return resolucoesKlipyKMC.get(slug);
-    const pedido = enviarMensagemRuntimeKMC({ tipo: "KMC_KLIPY_RESOLVER", slug }).then(resposta => {
-        if (!resposta?.sucesso || !codificarCodigoKlipy(resposta.url)) {
-            throw new Error(resposta?.erro || "Não foi possível recuperar este GIF da KLIPY.");
-        }
-        return resposta.url;
-    }).catch(erro => {
-        resolucoesKlipyKMC.delete(slug);
-        throw erro;
-    });
-    resolucoesKlipyKMC.set(slug, pedido);
-    if (resolucoesKlipyKMC.size > 100) resolucoesKlipyKMC.delete(resolucoesKlipyKMC.keys().next().value);
-    return pedido;
-}
-
-function resolverCodigoKlipyKMC(elemento, codigo, slug, legenda = { antes: "", depois: "" }) {
-    if (!elemento || elemento.dataset.kmcResolving === "true") return;
-    elemento.dataset.kmcResolving = "true";
-    solicitarUrlKlipyPorSlugKMC(slug).then(url => {
-        if (!elemento.isConnected || elemento.dataset.kmcProcessed === "true" || !elemento.textContent.includes(codigo)) return;
-        renderizarCodigoComMidia(elemento, codigo, url, criarImagemKlipy(url), true, legenda);
-    }).catch(() => {
-        // Se a API estiver indisponível, o código continua visível para tentar depois.
-    }).finally(() => {
-        if (elemento.dataset.kmcProcessed !== "true") delete elemento.dataset.kmcResolving;
-    });
-}
-
-async function buscarGifsKMC(proximaPagina = false) {
-    if (carregandoGifsKMC) return;
-    const consulta = campoBuscaGifsKMC.value.trim();
-    if (!proximaPagina) {
-        resultadosGifsKMC.replaceChildren();
-        paginaGifsKMC = 0;
-        temMaisGifsKMC = false;
-        consultaGifsAtualKMC = consulta;
-    } else if (!temMaisGifsKMC || consulta !== consultaGifsAtualKMC) return;
-
-    carregandoGifsKMC = true;
     botaoBuscarGifsKMC.disabled = true;
-    statusBuscaGifsKMC.textContent = paginaGifsKMC === 0 ? (consulta ? "Buscando GIFs…" : "Carregando GIFs populares…") : "Carregando mais GIFs…";
+    statusBuscaGifsKMC.textContent = campoBuscaGifsKMC.value.trim()
+        ? "Buscando GIFs…"
+        : "Carregando GIFs populares…";
     try {
-        const pagina = paginaGifsKMC + 1;
-        const resposta = await solicitarGifsKMC(consulta, pagina);
-        const gifs = resposta.gifs;
+        const gifs = await solicitarGifsKMC(consulta);
         if (!gifs.length) {
-            temMaisGifsKMC = false;
-            statusBuscaGifsKMC.textContent = paginaGifsKMC === 0 ? "Nenhum GIF encontrado." : "Não há mais GIFs.";
+            statusBuscaGifsKMC.textContent = "Nenhum GIF encontrado.";
             return;
         }
 
-        paginaGifsKMC = pagina;
-        temMaisGifsKMC = resposta.temMais;
-        statusBuscaGifsKMC.textContent = "Clique em um GIF para preparar o envio.";
+        statusBuscaGifsKMC.textContent = campoBuscaGifsKMC.value.trim()
+            ? "Clique em um GIF para preparar o envio."
+            : "GIFs populares — clique em um para preparar o envio.";
         for (const gif of gifs) {
-            if (!gif || typeof gif.url !== "string" || !codificarCodigoKlipy(gif.url, gif.slug)) continue;
+            if (!gif || typeof gif.url !== "string" || !/^https:\/\/media[0-9]*\.giphy\.com\//i.test(gif.url)) continue;
             const escolha = document.createElement("button");
             escolha.type = "button";
             escolha.title = gif.title || "Selecionar GIF";
@@ -1395,7 +1354,7 @@ async function buscarGifsKMC(proximaPagina = false) {
 
             const imagem = document.createElement("img");
             imagem.src = gif.preview || gif.url;
-            imagem.alt = gif.title || "GIF da KLIPY";
+            imagem.alt = gif.title || "GIF do GIPHY";
             imagem.loading = "lazy";
             imagem.style.cssText = "display:block; width:100%; height:100px; object-fit:cover; border-radius:5px;";
             escolha.appendChild(imagem);
@@ -1403,7 +1362,6 @@ async function buscarGifsKMC(proximaPagina = false) {
                 evento.stopPropagation();
                 const campoUrl = document.getElementById("kmc-url");
                 campoUrl.value = gif.url;
-                gifKlipySelecionado = { slug: gif.slug, consulta: consultaGifsAtualKMC, url: gif.url };
                 campoUrl.dispatchEvent(new Event("input", { bubbles: true }));
                 fecharPainelAnimado(gifPainel);
                 abrirPainelAnimado(painel);
@@ -1414,16 +1372,9 @@ async function buscarGifsKMC(proximaPagina = false) {
     } catch (erro) {
         statusBuscaGifsKMC.textContent = erro.message || "Erro ao buscar GIFs.";
     } finally {
-        carregandoGifsKMC = false;
         botaoBuscarGifsKMC.disabled = false;
     }
 }
-
-resultadosGifsKMC.addEventListener("scroll", () => {
-    if (resultadosGifsKMC.scrollTop + resultadosGifsKMC.clientHeight >= resultadosGifsKMC.scrollHeight - 80) {
-        buscarGifsKMC(true);
-    }
-});
 
 document.getElementById("kmc-open-gifs").addEventListener("click", evento => {
     evento.stopPropagation();
@@ -1473,14 +1424,10 @@ function converterEnderecoParaTag(valor) {
     valor =
         valor.trim();
 
-
-
-    if (/^gph:[A-Za-z0-9_.-]+$/i.test(valor)) return valor;
-    if (/^klp:[A-Za-z0-9_-]{1,1800}$/i.test(valor)) return valor;
-
-    if (/^https:\/\/(?:static|static1|static2)\.klipy\.com\//i.test(valor)) {
-        const slug = gifKlipySelecionado?.url === valor ? gifKlipySelecionado.slug : null;
-        return codificarCodigoKlipy(valor, slug);
+    if (
+        /^gph:[A-Za-z0-9_.-]+$/i.test(valor)
+    ) {
+        return valor;
     }
 
     if (
@@ -1510,23 +1457,91 @@ function converterEnderecoParaTag(valor) {
         return valor;
     }
 
-    const giphyUrl = (() => {
-        try {
-            const url = new URL(valor);
-            return url.protocol === "https:" && /^(?:media\d*|i)\.giphy\.com$/i.test(url.hostname) && /\.gif$/i.test(url.pathname) ? url : null;
-        } catch (erro) { return null; }
-    })();
-    if (giphyUrl) {
-        const id = giphyUrl.pathname.match(/\/media\/(?:v1\.[^/]+\/)?([A-Za-z0-9_-]+)(?:\/|$)/i)?.[1] || giphyUrl.pathname.match(/^\/([A-Za-z0-9_-]+)\.gif$/i)?.[1];
-        if (id) {
-            const tag = codificarCodigoGiphy(id);
-            salvarLinkOriginal(tag, valor);
-            return tag;
-        }
-        return "img:" + encodeURIComponent(giphyUrl.href);
+    let resultado =
+        valor.match(
+            /giphy\.com\/media\/([A-Za-z0-9_-]+)(?:[/?#]|$)/i
+        );
+
+    if (resultado) {
+
+        const id =
+            resultado[1];
+
+        const tag =
+            codificarCodigoGiphy(id);
+
+        salvarLinkOriginal(
+            tag,
+            valor
+        );
+
+        return tag;
     }
 
-    let resultado =
+    resultado =
+        valor.match(
+            /giphy\.com\/gifs\/[^/?#]+-([A-Za-z0-9_-]+)(?:[/?#]|$)/i
+        );
+
+    if (resultado) {
+
+        const id =
+            resultado[1];
+
+        const tag =
+            codificarCodigoGiphy(id);
+
+        salvarLinkOriginal(
+            tag,
+            valor
+        );
+
+        return tag;
+    }
+
+    resultado =
+        valor.match(
+            /(?:https?:\/\/)?(?:media|i)\.giphy\.com\/(?:media\/)?([A-Za-z0-9_-]+)(?:\/|$)/i
+        );
+
+    if (resultado) {
+
+        const id =
+            resultado[1];
+
+        const tag =
+            codificarCodigoGiphy(id);
+
+        salvarLinkOriginal(
+            tag,
+            valor
+        );
+
+        return tag;
+    }
+
+    resultado =
+        valor.match(
+            /giphy\.com\/media\/v1\.[^/?#]+\/([A-Za-z0-9_-]+)(?:\/|$)/i
+        );
+
+    if (resultado) {
+
+        const id =
+            resultado[1];
+
+        const tag =
+            codificarCodigoGiphy(id);
+
+        salvarLinkOriginal(
+            tag,
+            valor
+        );
+
+        return tag;
+    }
+
+    resultado =
         valor.match(
             /(?:https?:\/\/)?media\.tenor\.com\/([A-Za-z0-9_-]+)(?:\/|$)/i
         );
@@ -2120,10 +2135,6 @@ function atualizarLinkColado() {
     const botaoCopiar = document.getElementById("kmc-copy-code");
     const valor = campo.value.trim();
 
-    if (gifKlipySelecionado && valor !== gifKlipySelecionado.url && valor !== `klp:${gifKlipySelecionado.slug}`) {
-        gifKlipySelecionado = null;
-    }
-
     imagemSelecionada = null;
     limparImagemOriginalSelecionada();
     document.getElementById("kmc-file").value = "";
@@ -2145,27 +2156,7 @@ function atualizarLinkColado() {
 
     let media = null;
     if (/^gph:/i.test(tag)) {
-        media = criarImagemGiphy(decodificarCodigoGiphy(tag));
-    } else if (/^klp:/i.test(tag)) {
-        const urlKlipy = decodificarCodigoKlipy(tag);
-        if (urlKlipy) media = criarImagemKlipy(urlKlipy);
-        else {
-            const slugKlipy = extrairSlugCodigoKlipy(tag);
-            if (slugKlipy) solicitarUrlKlipyPorSlugKMC(slugKlipy).then(url => {
-                if (campo.value === tag) {
-                    const imagem = criarImagemKlipy(url);
-                    imagem.style.maxWidth = "180px";
-                    imagem.style.maxHeight = "120px";
-                    imagem.style.borderRadius = "8px";
-                    imagem.style.display = "block";
-                    const preview = document.getElementById("kmc-image-preview-media");
-                    if (preview) {
-                        preview.replaceChildren(imagem);
-                        atualizarPreviaMensagemKMC();
-                    }
-                }
-            }).catch(() => {});
-        }
+        media = criarImagemGiphy(decodificarCodigoGiphy(tag) || tag.slice(4));
     } else if (/^tnr:/i.test(tag)) {
         media = criarImagemTenor(decodificarCodigoTenor(tag));
     } else if (/^KMCGIF_TNR_/i.test(tag)) {
@@ -2176,7 +2167,7 @@ function atualizarLinkColado() {
     } else if (/^img:https%3A/i.test(tag)) {
         try {
             const url = decodeURIComponent(tag.slice(4));
-            if (/^https:\/\/files\.catbox\.moe\//i.test(url) || /^https:\/\/(?:media\d*|i)\.giphy\.com\/.+\.gif(?:[?#]|$)/i.test(url)) {
+            if (/^https:\/\/files\.catbox\.moe\//i.test(url)) {
                 media = criarImagemEnviada(url);
             }
         } catch (erro) {
@@ -2827,16 +2818,6 @@ document.getElementById(
 
         if (enviado) {
 
-            const compartilhamentoKlipy = gifKlipySelecionado;
-            if (compartilhamentoKlipy?.slug) {
-                void enviarMensagemRuntimeKMC({
-                    tipo: "KMC_KLIPY_COMPARTILHADO",
-                    slug: compartilhamentoKlipy.slug,
-                    consulta: compartilhamentoKlipy.consulta
-                }).catch(() => {});
-            }
-            gifKlipySelecionado = null;
-
             setTimeout(() => {
 
                 campoUrl.value =
@@ -2884,7 +2865,7 @@ document.getElementById(
 
 
 // ========================================
-// VISUALIZADOR DE MÍDIA
+// GIPHY
 // ========================================
 
 function abrirMidiaAmpliadaKMC(midia) {
@@ -2951,32 +2932,65 @@ function prepararCliqueParaAmpliarKMC(imagem) {
 }
 
 function criarImagemGiphy(id) {
-    if (!id) return null;
-    const imagem = document.createElement("img");
-    imagem.dataset.kmcMedia = "true";
-    imagem.dataset.kmcSrc = obterLinkOriginal(codificarCodigoGiphy(id)) || `https://media.giphy.com/media/${encodeURIComponent(id)}/giphy.gif`;
-    imagem.alt = "GIF";
-    imagem.style.maxWidth = "220px";
-    imagem.style.maxHeight = "220px";
-    imagem.style.borderRadius = "8px";
-    imagem.style.display = "block";
-    imagem.onerror = () => {
-        const alternativa = `https://i.giphy.com/${encodeURIComponent(id)}.gif`;
-        if (imagem.src !== alternativa) { imagem.dataset.kmcSrc = alternativa; imagem.src = alternativa; }
-    };
-    return prepararCliqueParaAmpliarKMC(imagem);
-}
 
-function criarImagemKlipy(url) {
-    const imagem = document.createElement("img");
-    imagem.dataset.kmcMedia = "true";
-    imagem.dataset.kmcSrc = url;
-    imagem.alt = "GIF da KLIPY";
-    imagem.style.maxWidth = "220px";
-    imagem.style.maxHeight = "220px";
-    imagem.style.borderRadius = "8px";
-    imagem.style.display = "block";
-    imagem.src = url;
+    const imagem =
+        document.createElement("img");
+
+    imagem.dataset.kmcMedia =
+        "true";
+
+    const linkOriginal =
+        obterLinkOriginal(codificarCodigoGiphy(id)) ||
+        obterLinkOriginal("gph:" + id);
+
+    if (linkOriginal) {
+
+        imagem.dataset.kmcSrc =
+            linkOriginal;
+
+    } else {
+
+        imagem.dataset.kmcSrc =
+            "https://media.giphy.com/media/" +
+            encodeURIComponent(id) +
+            "/giphy.gif";
+    }
+
+    imagem.alt =
+        "GIF";
+
+    imagem.style.maxWidth =
+        "220px";
+
+    imagem.style.maxHeight =
+        "220px";
+
+    imagem.style.borderRadius =
+        "8px";
+
+    imagem.style.display =
+        "block";
+
+    imagem.onerror =
+        () => {
+
+            const alternativa =
+                "https://i.giphy.com/" +
+                encodeURIComponent(id) +
+                ".gif";
+
+            if (
+                imagem.src !==
+                alternativa
+            ) {
+
+                imagem.dataset.kmcSrc =
+                    alternativa;
+                imagem.src =
+                    alternativa;
+            }
+        };
+
     return prepararCliqueParaAmpliarKMC(imagem);
 }
 
@@ -3612,12 +3626,14 @@ function processarElementoGif(elemento) {
         return false;
     }
 
-    // O código invisível só pode ser interpretado no span da mensagem.
-    // A varredura também visita divs ancestrais; decodificar o textContent
-    // deles poderia substituir um bloco inteiro da página pelo GIF.
-    const podeTerLegenda = elemento.tagName === "SPAN" &&
-        elemento.classList.contains("font-normal") &&
-        !elemento.querySelector("span.font-normal");
+    if (
+        elemento.querySelector &&
+        elemento.querySelector(
+            "img, video, picture, source"
+        )
+    ) {
+        return false;
+    }
 
     let texto =
         (elemento.textContent || "")
@@ -3625,19 +3641,9 @@ function processarElementoGif(elemento) {
 
     let legenda = { antes: "", depois: "" };
 
-    const codigoInvisivel = podeTerLegenda ? decodificarCodigoInvisivel(texto) : null;
-    if (codigoInvisivel) {
-        legenda = { antes: removerCodigoInvisivel(texto).trim(), depois: "" };
-        texto = codigoInvisivel;
-    } else if (
-        elemento.querySelector &&
-        elemento.querySelector("img, video, picture, source")
-    ) {
-        return false;
-    }
-
     // A legenda só pode ser lida no span do conteúdo da mensagem da Kick.
     // Em divs maiores o texto também contém o nome do usuário e outras mensagens.
+    const podeTerLegenda = elemento.tagName === "SPAN" && elemento.classList.contains("font-normal");
     const mensagemComMidia = podeTerLegenda ? separarMensagemComMidia(texto) : null;
     if (mensagemComMidia) {
         legenda = { antes: mensagemComMidia.antes, depois: mensagemComMidia.depois };
@@ -3649,7 +3655,7 @@ function processarElementoGif(elemento) {
     }
 
     if (
-        /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]{1,1800}|img:https%3A%2F%2F.+)$/i.test(texto) &&
+        /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|img:https%3A%2F%2F.+)$/i.test(texto) &&
         codigoAindaEstaSendoDigitadoKMC(texto)
     ) {
         return false;
@@ -3680,23 +3686,19 @@ function processarElementoGif(elemento) {
     }
 
 
+    // ====================================
+    // GIPHY
+    // ====================================
+
     const idGiphy = decodificarCodigoGiphy(texto);
+
     if (idGiphy) {
-        const imagem = criarImagemGiphy(idGiphy);
+
+        const imagem =
+            criarImagemGiphy(idGiphy);
+
         renderizarCodigoComMidia(elemento, texto, imagem.src, imagem, true, legenda);
-        return true;
-    }
 
-    const urlKlipy = decodificarCodigoKlipy(texto);
-    if (urlKlipy) {
-        const imagem = criarImagemKlipy(urlKlipy);
-        renderizarCodigoComMidia(elemento, texto, urlKlipy, imagem, true, legenda);
-        return true;
-    }
-
-    const slugKlipy = extrairSlugCodigoKlipy(texto);
-    if (slugKlipy) {
-        resolverCodigoKlipyKMC(elemento, texto, slugKlipy, legenda);
         return true;
     }
 
@@ -3735,7 +3737,9 @@ function processarElementoGif(elemento) {
             );
 
         if (
-            !/^https:\/\/files\.catbox\.moe\//i.test(url)
+            !/^https:\/\/files\.catbox\.moe\//i.test(
+                url
+            )
         ) {
             return false;
         }
@@ -3861,7 +3865,7 @@ function procurarGifDentroElemento(
             (no.nodeValue || "").trim();
 
         if (
-            /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]{1,1800})$/i.test(
+            /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+)$/i.test(
                 texto
             )
         ) {
@@ -3885,19 +3889,6 @@ function procurarGifDentroElemento(
                 const id = codigo.replace(/^KMCGIF_TNR_/i, "").replace(/[._]GIF$/i, "");
                 const imagem = criarImagemTenor(id);
                 renderizarCodigoComMidia(pai, codificarCodigoTenor(id), imagem.src, imagem, true);
-            }
-            continue;
-        }
-
-        if (/^klp:/i.test(codigo)) {
-            const pai = textoNode.parentElement;
-            if (pai && pai.dataset.kmcProcessed !== "true") {
-                const url = decodificarCodigoKlipy(codigo);
-                if (url) renderizarCodigoComMidia(pai, codigo, url, criarImagemKlipy(url), true);
-                else {
-                    const slug = extrairSlugCodigoKlipy(codigo);
-                    if (slug) resolverCodigoKlipyKMC(pai, codigo, slug);
-                }
             }
             continue;
         }

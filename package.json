@@ -1,7 +1,7 @@
 {
   "name": "kickshot",
   "private": true,
-  "version": "1.0.13",
+  "version": "1.0.9",
   "description": "Verificações locais da extensão KICKShot",
   "scripts": {
     "sync:shared": "node scripts/sync-shared.js",
