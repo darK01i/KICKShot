@@ -5,8 +5,8 @@
 **Aviso:** Não envie conteúdo ilegal ou criminoso. Você é responsável pelas imagens compartilhadas. A extensão não se responsabiliza pelo conteúdo enviado. As imagens são hospedadas pelo Catbox e estão sujeitas às suas regras.
 Extensão independente para compartilhar imagens e GIFs no chat da Kick.
 ## Chrome e Brave
-1. Para Chrome, instale a KICKShot pela [Chrome Web Store](https://chromewebstore.google.com/detail/nlgaiipgkgnpgfodboplfhjlgoohbhne).
-2. Para Brave, baixe o ZIP da [versão mais recente em Releases](https://github.com/darK01i/KICKShot/releases/latest).
+1. Para Chrome, instale a extensão pela loja oficial [Chrome Web Store](https://chromewebstore.google.com/detail/nlgaiipgkgnpgfodboplfhjlgoohbhne).
+2. Para Firefox, instale a extensão pela loja oficial [Firefox Add-ons](https://addons.mozilla.org/pt-BR/firefox/addon/kickshot/).
 3. Extraia o ZIP.
 4. Abra `brave://extensions` e ative o modo de desenvolvedor.
 5. Clique em **Carregar sem compactação** e selecione a pasta extraída que contém `manifest.json`.
