@@ -111,6 +111,111 @@ test("os handlers de upload rejeitam páginas que não são da Kick", () => {
     }
 });
 
+test("ambos os backgrounds pesquisam na KLIPY com identificador local e validam os GIFs", async () => {
+    for (const arquivo of ["../background.js", "../Firefox/background.js"]) {
+        const listeners = [];
+        const evento = { addListener() {} };
+        const chromeApi = {
+            runtime: {
+                onMessage: { addListener: listener => listeners.push(listener) },
+                onInstalled: evento,
+                onStartup: evento
+            },
+            tabs: { onUpdated: evento, query: async () => [] },
+            scripting: { executeScript: async () => {} },
+            storage: { local: { get: (_keys, callback) => callback({}), set: (_value, callback) => callback?.() } }
+        };
+        let urlSolicitada;
+        vm.runInNewContext(fs.readFileSync(path.join(__dirname, arquivo), "utf8"), {
+            chrome: chromeApi,
+            KICKSHOT_KLIPY_APP_KEY: "test-key",
+            URL,
+            AbortController,
+            crypto: webcrypto,
+            setTimeout,
+            clearTimeout,
+            fetch: async url => {
+                urlSolicitada = new URL(url);
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({
+                        result: true,
+                        data: { data: [{
+                            slug: "peepoJAM-1",
+                            title: "Teste",
+                            file: {
+                                hd: { gif: { url: "https://static.klipy.com/test.gif" } },
+                                sm: { webp: { url: "https://static1.klipy.com/test.webp" } }
+                            }
+                        }] }
+                    })
+                };
+            },
+            console: { warn() {}, error() {} }
+        });
+
+        const listener = listeners.find((candidato, indice) => indice > 0);
+        assert.ok(listener, `handler KLIPY ausente em ${arquivo}`);
+        const resposta = await new Promise(resolve => {
+            assert.equal(listener(
+                { tipo: "KMC_BUSCAR_GIFS", consulta: "peepo", pagina: 1 },
+                { url: "https://kick.com/dark01i" },
+                resolve
+            ), true);
+        });
+
+        assert.equal(urlSolicitada.hostname, "api.klipy.com");
+        assert.match(urlSolicitada.pathname, /\/gifs\/search$/);
+        assert.equal(urlSolicitada.searchParams.get("q"), "peepo");
+        assert.ok(urlSolicitada.searchParams.get("customer_id"));
+        assert.deepEqual(JSON.parse(JSON.stringify(resposta)), {
+            sucesso: true,
+            gifs: [{ url: "https://static.klipy.com/test.gif", preview: "https://static1.klipy.com/test.webp", title: "Teste", slug: "peepoJAM-1" }],
+            temMais: false
+        });
+    }
+});
+
+test("o manifesto Firefox carrega a configuração KLIPY antes do background sem importScripts", async () => {
+    const pastaFirefox = path.join(__dirname, "../Firefox");
+    const manifesto = JSON.parse(fs.readFileSync(path.join(pastaFirefox, "manifest.json"), "utf8"));
+    const listeners = [];
+    let requisitouKlipy = false;
+    const contexto = vm.createContext({
+        chrome: {
+            runtime: { onMessage: { addListener: listener => listeners.push(listener) } },
+            storage: { local: { get: (_keys, callback) => callback({ klipyCustomerId: "test-customer" }) } }
+        },
+        URL,
+        AbortController,
+        setTimeout,
+        clearTimeout,
+        fetch: async url => {
+            const endereco = new URL(url);
+            assert.equal(endereco.hostname, "api.klipy.com");
+            assert.ok(endereco.pathname === `/api/v1/${encodeURIComponent(contexto.KICKSHOT_KLIPY_APP_KEY)}/gifs/search`, "a requisição deve usar a configuração KLIPY carregada");
+            requisitouKlipy = true;
+            return { ok: true, json: async () => ({ result: true, data: { data: [] } }) };
+        },
+        console: { warn() {}, error() {} }
+    });
+    assert.equal(typeof contexto.importScripts, "undefined");
+    for (const arquivo of manifesto.background.scripts) {
+        vm.runInContext(fs.readFileSync(path.join(pastaFirefox, arquivo), "utf8"), contexto, { filename: arquivo });
+    }
+    assert.ok(typeof contexto.KICKSHOT_KLIPY_APP_KEY === "string" && contexto.KICKSHOT_KLIPY_APP_KEY.length > 0, "o manifesto deve carregar a configuração KLIPY");
+    const resposta = await new Promise(resolve => {
+        assert.equal(listeners[1](
+            { tipo: "KMC_BUSCAR_GIFS", consulta: "peepo", pagina: 1 },
+            { url: "https://kick.com/dark01i" },
+            resolve
+        ), true);
+    });
+    assert.equal(requisitouKlipy, true);
+    assert.equal(resposta.sucesso, true);
+});
+
 test("decodifica códigos curtos para links do Catbox", () => {
     assert.equal(decodificarImagem("image_123_webm"), "https://files.catbox.moe/image_123.webm");
 });
@@ -125,14 +230,21 @@ test("decodifica códigos identificados com .IMG ou .GIF e preserva o formato an
     }
 });
 
-test("adiciona _GIF aos GIFs GIPHY e ainda entende códigos antigos", () => {
+test("mantém códigos GIPHY e links diretos de GIF compatíveis nos dois navegadores", () => {
     for (const mediaCodes of mediaCodesModules) {
-        const codigoNovo = mediaCodes.codificarCodigoGiphy("gif123");
-        assert.equal(codigoNovo, "gph:gif123_GIF");
-        assert.equal(mediaCodes.decodificarCodigoGiphy(codigoNovo), "gif123");
-        assert.equal(mediaCodes.decodificarCodigoGiphy("gph:gif123"), "gif123");
-        assert.equal(mediaCodes.decodificarCodigoGiphy("gph:gif123.GIF"), "gif123");
-        assert.equal(mediaCodes.codificarCodigoGiphy("id com espaço"), null);
+        const codigo = mediaCodes.codificarCodigoGiphy("abc123_Xy");
+        assert.equal(codigo, "gph:abc123_Xy_GIF");
+        assert.equal(mediaCodes.decodificarCodigoGiphy(codigo), "abc123_Xy");
+        assert.equal(mediaCodes.decodificarCodigoGiphy("gph:abc123_Xy"), "abc123_Xy");
+        assert.equal(mediaCodes.decodificarCodigoGiphy("gph:inválido"), null);
+    }
+
+    for (const arquivo of ["../content.js", "../Firefox/content.js"]) {
+        const contentScript = fs.readFileSync(path.join(__dirname, arquivo), "utf8");
+        assert.match(contentScript, /function criarImagemGiphy\(id\)/);
+        assert.match(contentScript, /https:\/\/media\.giphy\.com\/media\//);
+        assert.match(contentScript, /https:\/\/i\.giphy\.com\//);
+        assert.ok(contentScript.includes("/^(?:media\\d*|i)\\.giphy\\.com$/i"));
     }
 });
 
@@ -151,6 +263,25 @@ test("adiciona _GIF aos GIFs Tenor e mantém compatibilidade com códigos antigo
     }
 });
 
+test("codifica, reconhece e valida códigos de GIFs KLIPY nos dois navegadores", () => {
+    for (const mediaCodes of mediaCodesModules) {
+        const url = "https://static.klipy.com/example.gif";
+        const codigo = mediaCodes.codificarCodigoKlipy(url, "peepoJAM-123");
+        assert.equal(codigo, "klp:peepoJAM-123");
+        assert.equal(mediaCodes.extrairSlugCodigoKlipy(codigo), "peepoJAM-123");
+        assert.equal(mediaCodes.decodificarCodigoKlipy(codigo), null);
+        assert.deepEqual(mediaCodes.separarMensagemComMidia("oi " + codigo), {
+            antes: "oi",
+            codigo,
+            depois: ""
+        });
+        const invisivel = mediaCodes.montarMensagemComMidia("oi", "klp:cat");
+        assert.match(invisivel, /collectiblespeepoJAM/);
+        assert.equal(mediaCodes.decodificarCodigoInvisivel(invisivel), "klp:cat");
+        assert.equal(mediaCodes.codificarCodigoKlipy("https://example.com/example.gif", "peepoJAM"), null);
+    }
+});
+
 test("normaliza os códigos Tenor com _GIF em ambos os content scripts", () => {
     for (const arquivo of ["../content.js", "../Firefox/content.js"]) {
         const contentScript = fs.readFileSync(path.join(__dirname, arquivo), "utf8");
@@ -158,45 +289,6 @@ test("normaliza os códigos Tenor com _GIF em ambos os content scripts", () => {
         assert.match(contentScript, /const \{[^}]*codificarCodigoTenor, decodificarCodigoTenor[^}]*\}/);
         assert.match(contentScript, /codificarCodigoTenor\(resultado\[1\]\)/);
         assert.match(contentScript, /decodificarCodigoTenor\(texto\)/);
-    }
-});
-
-test("extrai o ID real do endereço direto de imagem do GIPHY nos dois navegadores", () => {
-    for (const arquivo of ["../content.js", "../Firefox/content.js"]) {
-        const source = fs.readFileSync(path.join(__dirname, arquivo), "utf8");
-        const start = source.indexOf("function converterEnderecoParaTag");
-        const end = source.indexOf("\nfunction limparPreviewImagem", start);
-        assert.ok(start >= 0 && end > start, `conversor ausente em ${arquivo}`);
-        const conversor = vm.runInNewContext(`(${source.slice(start, end)})`, {
-            URL,
-            encodeURIComponent,
-            codificarCodigoGiphy: id => mediaCodesModules[0].codificarCodigoGiphy(id),
-            codificarCodigoTenor: id => mediaCodesModules[0].codificarCodigoTenor(id),
-            decodificarCodigoTenor: codigo => mediaCodesModules[0].decodificarCodigoTenor(codigo),
-            salvarLinkOriginal() {}
-        });
-
-        assert.equal(
-            conversor("https://media.giphy.com/media/gifABC123/giphy.gif"),
-            "gph:gifABC123_GIF"
-        );
-        assert.equal(
-            conversor("https://media.giphy.com/media/v1.token123/gifABC123/giphy.gif"),
-            "gph:gifABC123_GIF"
-        );
-        const urlDireta = "https://media.giphy.com/media/v1.token123/giphy.gif";
-        const codigoDireto = conversor(urlDireta);
-        assert.ok(codigoDireto.startsWith("img:https%3A%2F%2F"));
-        assert.equal(decodeURIComponent(codigoDireto.slice(4)), urlDireta);
-    }
-});
-test("usa o código GIPHY terminado em _GIF na busca, prévia e leitura do chat", () => {
-    for (const arquivo of ["../content.js", "../Firefox/content.js"]) {
-        const contentScript = fs.readFileSync(path.join(__dirname, arquivo), "utf8");
-
-        assert.match(contentScript, /codificarCodigoGiphy\(id\)/);
-        assert.match(contentScript, /criarImagemGiphy\(decodificarCodigoGiphy\(tag\)/);
-        assert.match(contentScript, /const idGiphy = decodificarCodigoGiphy\(texto\)/);
     }
 });
 
@@ -243,7 +335,6 @@ test("coloca a mensagem opcional antes do código da mídia", () => {
 test("usa collectiblespeepoJAM como fallback para os formatos de mídia reconhecidos", () => {
     for (const mediaCodes of mediaCodesModules) {
         for (const codigo of [
-            "gph:UCl0NcfQEPPTOoiezU_GIF",
             "tnr:3fPxP8_e45wAAAAM_GIF",
             "KMC_image_123_png_IMG",
             "KMCIMG_nw2hdp_png",
@@ -257,7 +348,6 @@ test("usa collectiblespeepoJAM como fallback para os formatos de mídia reconhec
             assert.equal(mediaCodes.removerCodigoInvisivel(mensagem), "");
         }
 
-        assert.equal(mediaCodes.decodificarCodigoGiphy("gph:UCl0NcfQEPPTOoiezUÉUMGIFCARALHO_GIF"), null);
         assert.equal(mediaCodes.decodificarCodigoImagem("KMC_image_123_pngÉUMAIMAGEMCARALHO_IMG"), null);
         const mensagemComLegenda = mediaCodes.montarMensagemComMidia("olha isso", "tnr:gif123");
         assert.ok(mensagemComLegenda.startsWith("olha isso collectiblespeepoJAM "));
@@ -274,10 +364,6 @@ test("separa mensagens com códigos identificados de imagem e GIF", () => {
     assert.deepEqual(
         separarMensagemComMidia("animação KMC_nw2hdp_gif_GIF"),
         { antes: "animação", codigo: "KMC_nw2hdp_gif_GIF", depois: "" }
-    );
-    assert.deepEqual(
-        separarMensagemComMidia("reação gph:gif123_GIF"),
-        { antes: "reação", codigo: "gph:gif123_GIF", depois: "" }
     );
 });
 
@@ -443,10 +529,6 @@ test("separa o texto antes e depois do código da mídia", () => {
         separarMensagemComMidia("antes KMCIMG_nw2hdp_png depois"),
         { antes: "antes", codigo: "KMCIMG_nw2hdp_png", depois: "depois" }
     );
-    assert.deepEqual(
-        separarMensagemComMidia("gph:gif123 fim"),
-        { antes: "", codigo: "gph:gif123", depois: "fim" }
-    );
     assert.equal(separarMensagemComMidia("mensagem sem mídia"), null);
 });
 
@@ -474,11 +556,14 @@ test("exibe a prévia do arquivo selecionado nos dois navegadores", () => {
     }
 });
 
-test("carrega sugestões GIPHY ao abrir a busca e ao limpar o termo nos dois navegadores", () => {
+test("carrega e pesquisa GIFs pela KLIPY no painel dos dois navegadores", () => {
     for (const arquivo of ["../content.js", "../Firefox/content.js"]) {
         const contentScript = fs.readFileSync(path.join(__dirname, arquivo), "utf8");
 
-        assert.match(contentScript, /campoBuscaGifsKMC\.value\.trim\(\) \|\| "trending"/);
+        assert.match(contentScript, /Buscar GIFs na KLIPY/);
+        assert.match(contentScript, /tipo: "KMC_BUSCAR_GIFS"/);
+        assert.match(contentScript, /KMC_KLIPY_COMPARTILHADO/);
+        assert.match(contentScript, /buscarGifsKMC\(true\)/);
         assert.match(contentScript, /if \(!resultadosGifsKMC\.childElementCount\) buscarGifsKMC\(\)/);
         assert.match(contentScript, /campoBuscaGifsKMC\.focus\(\);\s*buscarGifsKMC\(\);/);
     }
