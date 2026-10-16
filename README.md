@@ -1,5 +1,5 @@
 # KICKShot
-
+A KICKShot é uma extensão independente e gratuita, desenvolvida com IA e inspirada em projetos semelhantes. Permite enviar imagens, buscar GIFs no GIPHY e visualizar mídias diretamente no chat da Kick, tornando as transmissões mais interativas. Projeto sem fins lucrativos.
 ## Aviso sobre conteúdo enviado
 **Aviso:** Não envie conteúdo ilegal ou criminoso. Você é responsável pelas imagens compartilhadas. A extensão não se responsabiliza pelo conteúdo enviado. As imagens são hospedadas pelo Catbox e estão sujeitas às suas regras.
 Extensão independente para compartilhar imagens e GIFs no chat da Kick.
