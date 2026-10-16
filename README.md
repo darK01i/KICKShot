@@ -10,5 +10,4 @@ Extensão independente para compartilhar imagens e GIFs no chat da Kick.
 3. GitHub: instale a ultima última versão (https://github.com/darK01i/KICKShot/releases/tag/v1.0.9)
 4. Abra `chrome://extensions` ou `about:debugging` e ative o modo de desenvolvedor.
 5. Clique em **Carregar sem compactação** e selecione a pasta extraída que contém `manifest.json`.
-Chrome: https://chromewebstore.google.com/detail/kickshot/nlgaiipgkgnpgfodboplfhjlgoohbhne
-Firefox: https://addons.mozilla.org/pt-BR/firefox/addon/kickshot/
+
