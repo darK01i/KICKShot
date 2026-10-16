@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "KICKShot",
-  "version": "1.0.10",
+  "version": "1.0.13",
   "browser_specific_settings": {
     "gecko": {
       "id": "kickshot@darkartz75",
       "data_collection_permissions": {
         "required": [
           "searchTerms",
-          "websiteContent"
+          "websiteContent",
+          "personallyIdentifyingInfo"
         ],
         "optional": []
       }
@@ -22,8 +23,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["icons/qr-vaquinha-livepix-gg.png"],
-      "matches": ["https://kick.com/*"]
+      "resources": [
+        "icons/qr-vaquinha-livepix-gg.png"
+      ],
+      "matches": [
+        "https://kick.com/*"
+      ]
     }
   ],
   "host_permissions": [
@@ -35,10 +40,17 @@
     "https://media.tenor.com/*",
     "https://c.tenor.com/*",
     "https://media1.tenor.com/*",
-    "https://kickshot-giphy.darkartz75.workers.dev/*"
+    "https://api.klipy.com/*",
+    "https://static.klipy.com/*",
+    "https://static1.klipy.com/*",
+    "https://static2.klipy.com/*"
+  ],
+  "permissions": [
+    "storage"
   ],
   "background": {
     "scripts": [
+      "klipy-config.js",
       "background.js"
     ]
   },
