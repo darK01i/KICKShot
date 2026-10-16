@@ -1,4 +1,3 @@
-if (typeof importScripts === "function") importScripts("klipy-config.js");
 chrome.runtime.onMessage.addListener((mensagem, remetente, responder) => {
     if (!mensagem || mensagem.tipo !== "KMC_UPLOAD_IMAGEM") {
         return false;
@@ -91,31 +90,9 @@ chrome.runtime.onMessage.addListener((mensagem, remetente, responder) => {
     return true;
 });
 
-const KLIPY_APP_KEY = globalThis.KICKSHOT_KLIPY_APP_KEY || "";
-const KLIPY_MEDIA_HOSTS = new Set(["static.klipy.com", "static1.klipy.com", "static2.klipy.com"]);
-
-function requisicaoKlipy(url, opcoes = {}) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    return fetch(url, { ...opcoes, signal: controller.signal }).finally(() => clearTimeout(timeout));
-}
-
-async function obterIdAnonimoKlipy() {
-    return new Promise(resolve => {
-        chrome.storage.local.get(["klipyCustomerId"], dados => {
-            const existente = dados && dados.klipyCustomerId;
-            if (typeof existente === "string" && existente) {
-                resolve(existente);
-                return;
-            }
-            const novo = crypto.randomUUID();
-            chrome.storage.local.set({ klipyCustomerId: novo }, () => resolve(novo));
-        });
-    });
-}
-
+// Busca de GIFs pelo Worker da KICKShot; a chave do GIPHY fica somente no servidor.
 chrome.runtime.onMessage.addListener((mensagem, remetente, responder) => {
-    if (!mensagem || !["KMC_BUSCAR_GIFS", "KMC_KLIPY_COMPARTILHADO", "KMC_KLIPY_RESOLVER"].includes(mensagem.tipo)) return false;
+    if (!mensagem || mensagem.tipo !== "KMC_BUSCAR_GIFS") return false;
 
     try {
         if (!remetente?.url || new URL(remetente.url).origin !== "https://kick.com") return false;
@@ -123,118 +100,24 @@ chrome.runtime.onMessage.addListener((mensagem, remetente, responder) => {
         return false;
     }
 
-    if (!KLIPY_APP_KEY) {
-        responder({ sucesso: false, erro: "A busca de GIFs está indisponível no momento." });
+    const consulta = typeof mensagem.consulta === "string" ? mensagem.consulta.trim().slice(0, 80) : "";
+    if (!consulta) {
+        responder({ sucesso: false, erro: "Digite algo para buscar." });
         return false;
     }
 
     (async () => {
         try {
-            if (mensagem.tipo === "KMC_KLIPY_RESOLVER") {
-                const slug = typeof mensagem.slug === "string" ? mensagem.slug : "";
-                if (!/^[A-Za-z0-9_-]{1,160}$/.test(slug)) {
-                    responder({ sucesso: false, erro: "O identificador do GIF é inválido." });
-                    return;
-                }
-                const url = new URL(`https://api.klipy.com/api/v1/${encodeURIComponent(KLIPY_APP_KEY)}/gifs/items`);
-                url.searchParams.set("slugs", slug);
-                const respostaItem = await requisicaoKlipy(url.href, { headers: { Accept: "application/json" } });
-                if (!respostaItem.ok) throw new Error("A KLIPY respondeu HTTP " + respostaItem.status + ".");
-                const dadosItem = await respostaItem.json();
-                const itens = Array.isArray(dadosItem?.data?.data)
-                    ? dadosItem.data.data
-                    : Array.isArray(dadosItem?.data)
-                        ? dadosItem.data
-                        : [];
-                const item = itens.find(resultado => resultado?.slug === slug);
-                const arquivo = item?.file || {};
-                const gif = arquivo.hd?.gif || arquivo.md?.gif || arquivo.sm?.gif || item?.media_formats?.gif;
-                const urlGif = typeof gif === "string" ? gif : gif?.url;
-                let enderecoGif;
-                try {
-                    enderecoGif = new URL(urlGif);
-                } catch (erro) {
-                    throw new Error("A KLIPY não encontrou esse GIF.");
-                }
-                if (enderecoGif.protocol !== "https:" || !KLIPY_MEDIA_HOSTS.has(enderecoGif.hostname)) {
-                    throw new Error("A KLIPY retornou um endereço de GIF inválido.");
-                }
-                responder({ sucesso: true, url: enderecoGif.href });
-                return;
-            }
-
-            if (mensagem.tipo === "KMC_KLIPY_COMPARTILHADO") {
-                const slug = typeof mensagem.slug === "string" ? mensagem.slug : "";
-                if (!/^[A-Za-z0-9_-]{1,160}$/.test(slug)) {
-                    responder({ sucesso: false, erro: "O identificador do GIF é inválido." });
-                    return;
-                }
-                const customerId = await obterIdAnonimoKlipy();
-                const url = `https://api.klipy.com/api/v1/${encodeURIComponent(KLIPY_APP_KEY)}/gifs/share/${encodeURIComponent(slug)}`;
-                const respostaCompartilhamento = await requisicaoKlipy(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ customer_id: customerId, q: String(mensagem.consulta || "").slice(0, 80) })
-                });
-                if (!respostaCompartilhamento.ok) {
-                    throw new Error("A KLIPY respondeu HTTP " + respostaCompartilhamento.status + " ao registrar o compartilhamento.");
-                }
-                const retornoCompartilhamento = await respostaCompartilhamento.json().catch(() => null);
-                if (retornoCompartilhamento?.result === false) {
-                    throw new Error("A KLIPY não registrou o compartilhamento.");
-                }
-                responder({ sucesso: true });
-                return;
-            }
-
-            const consulta = typeof mensagem.consulta === "string" ? mensagem.consulta.trim().slice(0, 80) : "";
-            const endpoint = consulta ? "search" : "trending";
-            const url = new URL(`https://api.klipy.com/api/v1/${encodeURIComponent(KLIPY_APP_KEY)}/gifs/${endpoint}`);
-            const customerId = await obterIdAnonimoKlipy();
-            const pagina = Number.isInteger(mensagem.pagina) ? Math.max(1, Math.min(mensagem.pagina, 100)) : 1;
-            const porPagina = 50;
-            url.searchParams.set("page", String(pagina));
-            url.searchParams.set("per_page", String(porPagina));
-            url.searchParams.set("customer_id", customerId);
-            url.searchParams.set("locale", "pt_BR");
-            url.searchParams.set("content_filter", "medium");
-            url.searchParams.set("format_filter", "gif");
-            if (consulta) url.searchParams.set("q", consulta);
-
-            const resposta = await requisicaoKlipy(url.href, { headers: { Accept: "application/json" } });
-            if (!resposta.ok) throw new Error("A KLIPY respondeu HTTP " + resposta.status + ".");
+            const url = new URL("https://kickshot-giphy.darkartz75.workers.dev/search");
+            url.searchParams.set("q", consulta);
+            const resposta = await fetch(url);
+            if (!resposta.ok) throw new Error("O servidor respondeu HTTP " + resposta.status + ".");
             const dados = await resposta.json();
-            if (dados?.result === false) throw new Error("A KLIPY não aceitou a busca.");
-            const itens = Array.isArray(dados?.data?.data)
-                ? dados.data.data
-                : Array.isArray(dados?.data)
-                    ? dados.data
-                    : [];
-            const gifs = itens.slice(0, porPagina).flatMap(item => {
-                if (!item) return [];
-                const arquivo = item.file || {};
-                const gif = arquivo.hd?.gif || arquivo.md?.gif || arquivo.sm?.gif || item.media_formats?.gif;
-                const preview = arquivo.sm?.webp || arquivo.sm?.gif || arquivo.md?.webp || gif;
-                const urlGif = typeof gif === "string" ? gif : gif?.url;
-                const urlPreview = typeof preview === "string" ? preview : preview?.url;
-                if (!urlGif || !urlPreview) return [];
-                try {
-                    const origem = new URL(urlGif);
-                    const origemPreview = new URL(urlPreview);
-                    if (origem.protocol !== "https:" || !KLIPY_MEDIA_HOSTS.has(origem.hostname) ||
-                        origemPreview.protocol !== "https:" || !KLIPY_MEDIA_HOSTS.has(origemPreview.hostname)) return [];
-                } catch (erro) {
-                    return [];
-                }
-                if (typeof item.slug !== "string" || !/^[A-Za-z0-9_-]{1,160}$/.test(item.slug)) return [];
-                return [{ url: urlGif, preview: urlPreview, title: String(item.title || "GIF da KLIPY").slice(0, 120), slug: item.slug }];
-            });
-            responder({ sucesso: true, gifs, temMais: pagina < 100 && itens.length >= porPagina });
+            const gifs = Array.isArray(dados.gifs) ? dados.gifs.slice(0, 12) : [];
+            responder({ sucesso: true, gifs });
         } catch (erro) {
-            console.warn("KICKShot: falha ao comunicar com a KLIPY.", erro?.name || "erro");
-            responder({ sucesso: false, erro: erro?.name === "AbortError"
-                ? "A busca demorou demais. Tente novamente."
-                : "Não foi possível buscar GIFs na KLIPY agora. Tente novamente." });
+            console.error("KICKShot: erro na busca de GIFs:", erro);
+            responder({ sucesso: false, erro: "Não foi possível buscar GIFs agora. Tente novamente." });
         }
     })();
 
@@ -257,10 +140,7 @@ chrome.runtime.onMessage.addListener((mensagem, remetente, responder) => {
         "i.giphy.com",
         "media.tenor.com",
         "c.tenor.com",
-        "media1.tenor.com",
-        "static.klipy.com",
-        "static1.klipy.com",
-        "static2.klipy.com"
+        "media1.tenor.com"
     ]);
     let url;
     try {
