@@ -1,10 +1,9 @@
-A KICKShot é uma extensão independente para compartilhar imagens e visualizar mídias compatíveis nos chats da Kick.
+Compartilhe imagens e GIFs no chat da Kick com a KICKShot! Envie imagens do seu dispositivo, cole links compatíveis ou encontre GIFs pela busca integrada da KLIPY. A extensão insere o código de mídia no campo do chat para você enviar e permite visualizar imagens e GIFs compatíveis enviados por outros usuários.
 
-Recursos
+A KICKShot mantém compatibilidade com códigos de mídia do GIPHY, Tenor e Catbox. Para visualizar as mídias da KICKShot no chat, os destinatários precisam usar uma extensão compatível. Esta versão não substitui códigos por emotes oficiais da Kick.
 
-- Envio de imagens escolhidas pelo usuário para hospedagem no Catbox.
-- Texto opcional antes da imagem ou GIF enviado.
-- Visualização de imagens e GIFs compatíveis compartilhados no chat.
-- Busca de GIFs no GIPHY e seleção para compartilhar no chat.
-- Compartilhamento de GIFs ao colar um link compatível.
- A KICKShot não é afiliada à Kick, ao GIPHY, ao Tenor ou ao Catbox.
+Antes de usar os recursos, você recebe um aviso de privacidade. As buscas de GIFs e os registros de compartilhamento passam pelo servidor intermediário da KICKShot, hospedado na Cloudflare, e são encaminhados à KLIPY. Imagens enviadas do seu dispositivo são hospedadas pelo Catbox. Consulte a política de privacidade para os detalhes.
+
+Não compartilhe conteúdo ilegal ou que viole os direitos de terceiros. Você é responsável pelas imagens que compartilha e deve respeitar as regras da Kick e dos serviços utilizados. O apoio pelo LivePix é totalmente opcional.
+
+A KICKShot é uma extensão independente e não é afiliada à Kick, à KLIPY, ao GIPHY, ao Tenor ou ao Catbox.

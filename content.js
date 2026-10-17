@@ -1,10 +1,17 @@
 (() => {
-    if (globalThis.__KICKSHOT_CONTENT_SCRIPT_STARTED__) return;
+    if (globalThis.__KICKSHOT_CONTENT_SCRIPT_STARTED__ || globalThis.__KICKSHOT_CONSENT_UI_STARTED__) return;
     if (!globalThis.KICKShotMediaCodes) {
         throw new Error("KICKShot: módulo de códigos de mídia não foi carregado.");
     }
-    const { codificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, montarMensagemComMidia, separarMensagemComMidia } = globalThis.KICKShotMediaCodes;
-    globalThis.__KICKSHOT_CONTENT_SCRIPT_STARTED__ = true;
+    globalThis.__KICKSHOT_CONSENT_UI_STARTED__ = true;
+
+    const CHAVE_CONSENTIMENTO_KMC = "kmcPrivacyConsentVersion";
+    const VERSAO_CONSENTIMENTO_KMC = 2;
+
+    function iniciarKICKShot() {
+        if (globalThis.__KICKSHOT_CONTENT_SCRIPT_STARTED__) return;
+        const { codificarImagem, decodificarCodigoImagem, codificarCodigoGiphy, decodificarCodigoGiphy, codificarCodigoTenor, decodificarCodigoTenor, codificarCodigoKlipy, decodificarCodigoKlipy, extrairSlugCodigoKlipy, extrairIdCodigoKlipy, montarMensagemComMidia, separarMensagemComMidia } = globalThis.KICKShotMediaCodes;
+        globalThis.__KICKSHOT_CONTENT_SCRIPT_STARTED__ = true;
 const SELETOR_CAMPO_EDITAVEL = 'textarea, input, [contenteditable]:not([contenteditable="false"]), [role="textbox"]';
 const codigosColadosRecentementeKMC = new Map();
 let codigoColadoAguardandoEnvioKMC = false;
@@ -54,9 +61,10 @@ function inserirTextoColadoKMC(campo, texto) {
 
 // Protege também o instante entre colar o texto e a Kick atualizar o editor.
 document.addEventListener("paste", evento => {
-    const alvo = evento.target instanceof Element
+    const campoAlvo = evento.target instanceof Element
         ? evento.target.closest(SELETOR_CAMPO_EDITAVEL)
         : null;
+    const alvo = campoAlvo && campoAlvoEhChatKMC(campoAlvo) ? campoAlvo : null;
     if (alvo) alvo.setAttribute("data-kmc-chat-input", "true");
 
     const textoOriginal = evento.clipboardData?.getData("text/plain") || "";
@@ -67,13 +75,13 @@ document.addEventListener("paste", evento => {
         inserirTextoColadoKMC(alvo, texto);
     }
 
-    const codigos = texto.match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+)/gi) || [];
-    if (codigos.length) {
+    const codigos = texto.match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]+)/gi) || [];
+    if (alvo && codigos.length) {
         codigoColadoAguardandoEnvioKMC = true;
         campoCodigoColadoKMC = alvo;
     }
 
-    for (const codigo of codigos) {
+    for (const codigo of alvo ? codigos : []) {
         // Infinity significa: aguarde até o código sair do editor (envio).
         codigosColadosRecentementeKMC.set(codigo.toLowerCase(), Infinity);
     }
@@ -85,7 +93,9 @@ document.addEventListener("focusin", evento => {
     const alvo = evento.target instanceof Element
         ? evento.target.closest(SELETOR_CAMPO_EDITAVEL)
         : null;
-    if (alvo) alvo.setAttribute("data-kmc-chat-input", "true");
+    if (alvo && campoAlvoEhChatKMC(alvo)) {
+        alvo.setAttribute("data-kmc-chat-input", "true");
+    }
 }, true);
 
 document.addEventListener("input", evento => {
@@ -93,12 +103,19 @@ document.addEventListener("input", evento => {
         ? evento.target
         : null;
     const alvo = elementoEvento?.closest(SELETOR_CAMPO_EDITAVEL) || elementoEvento;
-    if (alvo) {
-        if (alvo.matches?.(SELETOR_CAMPO_EDITAVEL)) {
-            alvo.setAttribute("data-kmc-chat-input", "true");
-        }
+    if (
+        alvo?.matches?.(SELETOR_CAMPO_EDITAVEL) &&
+        alvo.hasAttribute("data-kmc-chat-input") &&
+        !alvo.closest("#kmc-panel, #kmc-gif-panel")
+    ) {
         const conteudo = alvo.value ?? alvo.innerText ?? alvo.textContent ?? "";
-        const codigos = String(conteudo).match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+)/gi) || [];
+        const codigos = String(conteudo).match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]+)/gi) || [];
+        const codigosAtuais = new Set(codigos.map(codigo => codigo.toLowerCase()));
+        for (const [codigo, expiraEm] of codigosColadosRecentementeKMC) {
+            if (expiraEm === Infinity && !codigosAtuais.has(codigo)) {
+                codigosColadosRecentementeKMC.delete(codigo);
+            }
+        }
         if (codigos.length) {
             codigoColadoAguardandoEnvioKMC = true;
             campoCodigoColadoKMC = alvo;
@@ -115,7 +132,7 @@ document.addEventListener("input", evento => {
 function liberarCodigosColadosKMC(campo) {
     if (!campo) return;
     const conteudo = campo.value ?? campo.innerText ?? campo.textContent ?? "";
-    const codigos = String(conteudo).match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+)/gi) || [];
+    const codigos = String(conteudo).match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]+)/gi) || [];
     if (!codigos.length) return;
     codigoColadoAguardandoEnvioKMC = false;
     campoCodigoColadoKMC = null;
@@ -137,7 +154,7 @@ function reconciliarProtecaoDeCodigoColadoKMC() {
     const texto = campo?.isConnected
         ? String(campo.value ?? campo.innerText ?? campo.textContent ?? "")
         : "";
-    const aindaNoCampo = /(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+)/i.test(texto);
+    const aindaNoCampo = /(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]+)/i.test(texto);
     if (aindaNoCampo) return;
 
     codigoColadoAguardandoEnvioKMC = false;
@@ -165,7 +182,7 @@ function liberarProtecaoAoDetectarMensagemKMC(elemento) {
     ) return false;
 
     const texto = elemento.textContent || "";
-    const codigos = texto.match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+)/gi) || [];
+    const codigos = texto.match(/(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]+)/gi) || [];
     const codigoEnviado = codigos.find(codigo =>
         codigosColadosRecentementeKMC.has(codigo.toLowerCase())
     );
@@ -239,6 +256,11 @@ Object.assign(botao.style, {
 
 document.body.appendChild(botao);
 
+const fontesKMC = document.createElement("link");
+fontesKMC.rel = "stylesheet";
+fontesKMC.href = "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600;700&display=swap";
+document.head.appendChild(fontesKMC);
+
 const estilosKMC = document.createElement("style");
 estilosKMC.textContent = `
     #kmc-panel, #kmc-gif-panel {
@@ -273,6 +295,12 @@ estilosKMC.textContent = `
         scrollbar-width: thin;
         scrollbar-color: #555 #222;
     }
+    #kmc-gif-results {
+        max-height: min(365px, calc(100vh - 250px));
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #555 #222;
+    }
     #kmc-panel h3, #kmc-gif-panel h3 {
         display: flex;
         align-items: center;
@@ -281,6 +309,15 @@ estilosKMC.textContent = `
         margin: 0 0 16px !important;
         font-size: 17px;
         font-weight: 700;
+    }
+    #kmc-gif-panel #kmc-klipy-attribution {
+        flex: 0 1 auto;
+        margin-left: auto;
+        color: #d4d4d8;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.2;
+        white-space: nowrap;
     }
     #kmc-panel button, #kmc-gif-panel button {
         box-sizing: border-box;
@@ -441,6 +478,7 @@ estilosKMC.textContent = `
         font-weight: 400;
     }
     #kmc-coffee-notice strong { font-weight: 700; }
+    #kmc-coffee-fundraiser { font-weight: 500; }
     #kmc-coffee-card #kmc-coffee-close {
         position: absolute;
         top: 12px;
@@ -470,10 +508,8 @@ estilosKMC.textContent = `
     #kmc-coffee-qr {
         display: block;
         box-sizing: border-box;
-        width: min(250px, 100%);
-        max-width: 100%;
-        height: auto;
-        aspect-ratio: 1;
+        width: 250px;
+        height: 250px;
         padding: 0;
         border: 0;
         border-radius: 0;
@@ -663,7 +699,7 @@ painel.innerHTML = `
         📤 Enviar
     </button>
     <p style="margin:8px 0 0; color:#c4c4cc; font-size:11px; line-height:1.5; text-align:left;">
-        <strong>Aviso:</strong> Não envie conteúdo ilegal ou criminoso. Você é responsável pelas imagens compartilhadas. A extensão não se responsabiliza pelo conteúdo enviado. As imagens são hospedadas pelo Catbox e estão sujeitas às suas regras.
+        <strong>Aviso:</strong> Não envie conteúdo ilegal ou que viole os direitos de terceiros. Você é responsável pelas imagens que compartilha. As imagens enviadas do seu dispositivo são hospedadas pelo Catbox e devem seguir as regras da plataforma.
     </p>
 `;
 
@@ -678,21 +714,18 @@ modalApoioKMC.innerHTML = `
     <section id="kmc-coffee-card">
         <button id="kmc-coffee-close" type="button" aria-label="Fechar">×</button>
         <h2 id="kmc-coffee-title"><span>Pague um Café</span><img src="https://cdn.7tv.app/emote/60ae4121b2ecb01505492dbe/2x.webp" alt="Peepo" width="40" height="40" loading="lazy" decoding="async" style="display:block; flex:0 0 40px; object-fit:contain; transform:translate(7px, -8px);"></h2>
-        <p id="kmc-coffee-notice"><strong>AVISO:</strong> Você pode usar a extensão normalmente, sem precisar fazer nenhuma doação! 💚</p>
-        <p>Estou arrecadando R$ 25 para publicar a extensão na Chrome Web Store. Se quiser apoiar o projeto e ajudar a tornar isso possível, qualquer contribuição será muito bem-vinda. Obrigado pelo apoio!</p>
+        <p id="kmc-coffee-notice"><strong>AVISO:</strong> Você pode usar a extensão normalmente, sem precisar fazer nenhuma doação!</p>
+        <p id="kmc-coffee-fundraiser">Gostou da extensão e quer dar uma moral? Qualquer contribuição é bem-vinda, mas é totalmente opcional! Obrigado a todos que apoiam o projeto e gostam!</p>
         <div id="kmc-coffee-qr-wrap">
-            <img id="kmc-coffee-qr" alt="QR Code para abrir a vaquinha da KICKShot no LivePix" width="250" height="250" loading="lazy" decoding="async">
-            <span>Escaneie para abrir a vaquinha e ver o progresso.</span>
+            <img id="kmc-coffee-qr" alt="QR Code para abrir meu LivePix oficial" width="210" height="210" loading="lazy" decoding="async">
+            <span>Quer apoiar o projeto? Escaneie o QR Code! 💚</span>
         </div>
-        <a id="kmc-coffee-link" href="https://vaquinha.livepix.gg/kickshot-webstore" target="_blank" rel="noopener noreferrer">Abrir vaquinha no LivePix</a>
-        <p style="margin:10px 0 0; font-size:13px;">O QR Code leva você à campanha oficial do LivePix. Após escolher o valor da contribuição, basta realizar o pagamento via Pix. O progresso da meta será atualizado quando a doação for confirmada.</p>
+        <a id="kmc-coffee-link" href="https://livepix.gg/dark01i" target="_blank" rel="noopener noreferrer">Abrir meu LivePix</a>
+        <p style="margin:10px 0 0; font-size:13px;">O QR Code direciona você ao meu LivePix oficial. Escolha o valor da contribuição e faça o pagamento via Pix.</p>
     </section>
 `;
 document.body.appendChild(modalApoioKMC);
-const runtimeApoioKMC = globalThis.browser?.runtime || globalThis.chrome?.runtime;
-if (runtimeApoioKMC?.getURL) {
-    document.getElementById("kmc-coffee-qr").src = runtimeApoioKMC.getURL("icons/qr-vaquinha-livepix-gg.png");
-}
+document.getElementById("kmc-coffee-qr").src = chrome.runtime.getURL("icons/qr-vaquinha-livepix-gg.png");
 
 const gifPainel = document.createElement("div");
 
@@ -711,11 +744,23 @@ Object.assign(gifPainel.style, {
 });
 
 gifPainel.innerHTML = `
-    <h3>GIFs <button id="kmc-gif-close" type="button" aria-label="Fechar">×</button></h3>
+    <h3><span>GIFs</span><span id="kmc-klipy-attribution">Powered by KLIPY</span><button id="kmc-gif-close" type="button" aria-label="Fechar">×</button></h3>
 `;
 
 document.body.appendChild(gifPainel);
-gifPainel.insertAdjacentHTML("beforeend", '<div style="display:flex; gap:8px; margin-bottom:10px;"><div style="position:relative; flex:1;"><input id="kmc-gif-query" type="text" maxlength="80" placeholder="O que você quer encontrar?" aria-label="Buscar GIFs" style="width:100%; padding:10px 34px 10px 10px;"><button id="kmc-gif-clear" type="button" aria-label="Limpar busca" style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; padding:0 !important; border:0 !important; border-radius:50% !important; background:transparent !important; color:#fff !important; font-size:18px !important; line-height:1; align-items:center; justify-content:center; cursor:pointer;">×</button></div><button id="kmc-gif-search" type="button" style="padding:8px 12px; cursor:pointer;">Buscar</button></div><p id="kmc-gif-status" role="status" aria-live="polite" style="min-height:20px; margin:0 0 10px; color:#c4c4cc; font-size:13px;"></p><div id="kmc-gif-results" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:8px;"></div><p style="margin:12px 0 0; text-align:right; font-size:12px; color:#c4c4cc;">Powered by GIPHY</p>');
+
+// Se existir icons/klipy-logo.png, mostra o logo oficial no lugar do texto "Powered by KLIPY".
+try {
+    const atribuicaoKlipyKMC = document.getElementById("kmc-klipy-attribution");
+    const logoKlipyKMC = new Image();
+    logoKlipyKMC.alt = "Powered by KLIPY";
+    logoKlipyKMC.style.cssText = "display:block; height:20px; width:auto; max-width:none; flex-shrink:0; object-fit:contain; image-rendering:auto; position:relative; top:-2px; left:-2px;";
+    logoKlipyKMC.onload = () => { if (atribuicaoKlipyKMC) { atribuicaoKlipyKMC.style.cssText = "display:inline-flex; align-items:center; gap:6px;"; atribuicaoKlipyKMC.replaceChildren(document.createTextNode("Powered by"), logoKlipyKMC); } };
+    logoKlipyKMC.src = chrome.runtime.getURL("icons/klipy-logo.png");
+} catch (erro) {
+    // Sem o logo, o texto continua aparecendo.
+}
+gifPainel.insertAdjacentHTML("beforeend", '<div style="display:flex; gap:8px; margin-bottom:10px;"><div style="position:relative; flex:1;"><input id="kmc-gif-query" type="text" maxlength="80" placeholder="Search KLIPY" aria-label="Buscar GIFs" style="width:100%; padding:10px 34px 10px 10px;"><button id="kmc-gif-clear" type="button" aria-label="Limpar busca" style="display:none; position:absolute; right:6px; top:50%; transform:translateY(-50%); width:24px; height:24px; padding:0 !important; border:0 !important; border-radius:50% !important; background:transparent !important; color:#fff !important; font-size:18px !important; line-height:1; align-items:center; justify-content:center; cursor:pointer;">×</button></div><button id="kmc-gif-search" type="button" style="padding:8px 12px; cursor:pointer;">Buscar</button></div><p id="kmc-gif-status" role="status" aria-live="polite" style="min-height:20px; margin:0 0 10px; color:#c4c4cc; font-size:13px;"></p><div id="kmc-gif-results" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:8px;"></div>');
 
 function fecharPainelAnimado(painelAlvo) {
     if (painelAlvo.style.display === "none") return;
@@ -986,161 +1031,74 @@ function posicionarPainel() {
 
 function posicionarBotao() {
 
-    const engrenagens = [
-        ...document.querySelectorAll(
-            'svg[data-ds-icon="Settings"]'
-        )
-    ];
-
-    if (!engrenagens.length) {
+    const caminho = window.location.pathname;
+    const paginaDeCanal = caminho !== "/" &&
+        !caminho.startsWith("/categories") &&
+        !caminho.startsWith("/search") &&
+        !caminho.startsWith("/browse") &&
+        !caminho.startsWith("/directory") &&
+        !caminho.startsWith("/video");
+    if (!paginaDeCanal) {
         botao.style.display = "none";
         return;
     }
 
-    const botoes =
-        engrenagens
-            .map(svg => svg.closest("button"))
-            .filter(Boolean)
-            .filter(button => {
+    const engrenagens = [...document.querySelectorAll('svg[data-ds-icon="Settings"]')];
+    const botoes = engrenagens
+        .map(svg => svg.closest("button"))
+        .filter(Boolean)
+        .filter(button => {
+            const rect = button.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+        });
 
-                const rect =
-                    button.getBoundingClientRect();
-
-                return (
-                    rect.width > 0 &&
-                    rect.height > 0 &&
-                    rect.bottom > 0 &&
-                    rect.top < window.innerHeight
-                );
-            });
-
-    if (!botoes.length) {
-        botao.style.display = "none";
-        return;
-    }
-
-    const campos = [
-        ...document.querySelectorAll(SELETOR_CAMPO_EDITAVEL)
-    ].filter(elemento => {
-
-        const rect =
-            elemento.getBoundingClientRect();
-
-        if (
-            rect.width === 0 ||
-            rect.height === 0
-        ) {
-            return false;
-        }
-
-        const texto = (
-            elemento.getAttribute("placeholder") || ""
-        ).toLowerCase();
-
-        return (
-            texto.includes("message") ||
-            texto.includes("mensagem") ||
-            texto.includes("chat") ||
-            elemento.isContentEditable ||
-            elemento.getAttribute("role") === "textbox"
-        );
+    const campos = [...document.querySelectorAll(SELETOR_CAMPO_EDITAVEL)].filter(elemento => {
+        if (elemento.closest("#kmc-panel, #kmc-gif-panel")) return false;
+        const rect = elemento.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0 || rect.bottom <= 0 || rect.top >= window.innerHeight) return false;
+        const texto = (elemento.getAttribute("placeholder") || "").toLowerCase();
+        return texto.includes("message") || texto.includes("mensagem") || texto.includes("chat") ||
+            elemento.isContentEditable || elemento.getAttribute("role") === "textbox";
     });
 
+    const campoChat = campos.sort((a, b) => {
+        const ra = a.getBoundingClientRect();
+        const rb = b.getBoundingClientRect();
+        const distanciaA = Math.abs(window.innerWidth - ra.right) + Math.abs(window.innerHeight - ra.bottom);
+        const distanciaB = Math.abs(window.innerWidth - rb.right) + Math.abs(window.innerHeight - rb.bottom);
+        return distanciaA - distanciaB;
+    })[0] || null;
+
     let botaoEngrenagem = null;
-    let campoChat = null;
-
-    if (campos.length) {
-
-        campoChat =
-            campos.sort((a, b) => {
-
-                const ra =
-                    a.getBoundingClientRect();
-
-                const rb =
-                    b.getBoundingClientRect();
-
-                const distanciaA =
-                    Math.abs(
-                        window.innerWidth - ra.right
-                    ) +
-                    Math.abs(
-                        window.innerHeight - ra.bottom
-                    );
-
-                const distanciaB =
-                    Math.abs(
-                        window.innerWidth - rb.right
-                    ) +
-                    Math.abs(
-                        window.innerHeight - rb.bottom
-                    );
-
-                return distanciaA - distanciaB;
-
-            })[0];
-
-        const campoRect =
-            campoChat.getBoundingClientRect();
-
-        botaoEngrenagem =
-            botoes.sort((a, b) => {
-
-                const ra =
-                    a.getBoundingClientRect();
-
-                const rb =
-                    b.getBoundingClientRect();
-
-                const distanciaA =
-                    Math.abs(
-                        ra.left - campoRect.right
-                    ) +
-                    Math.abs(
-                        ra.top - campoRect.top
-                    );
-
-                const distanciaB =
-                    Math.abs(
-                        rb.left - campoRect.right
-                    ) +
-                    Math.abs(
-                        rb.top - campoRect.top
-                    );
-
-                return distanciaA - distanciaB;
-
-            })[0];
-
-    } else {
-
-        botaoEngrenagem =
-            botoes.sort((a, b) => {
-
-                return (
-                    b.getBoundingClientRect().top -
-                    a.getBoundingClientRect().top
-                );
-
-            })[0];
+    if (botoes.length && campoChat) {
+        const campoRect = campoChat.getBoundingClientRect();
+        botaoEngrenagem = botoes.sort((a, b) => {
+            const ra = a.getBoundingClientRect();
+            const rb = b.getBoundingClientRect();
+            const distanciaA = Math.abs(ra.left - campoRect.right) + Math.abs(ra.top - campoRect.top);
+            const distanciaB = Math.abs(rb.left - campoRect.right) + Math.abs(rb.top - campoRect.top);
+            return distanciaA - distanciaB;
+        })[0];
+    } else if (botoes.length) {
+        botaoEngrenagem = botoes.sort((a, b) =>
+            b.getBoundingClientRect().top - a.getBoundingClientRect().top
+        )[0];
     }
 
-    if (!botaoEngrenagem) {
+    // Alguns layouts do chat da Kick não exibem o botão de configurações.
+    // Nesses casos, ancora o KICKShot ao campo de mensagem visível.
+    const ancora = botaoEngrenagem || campoChat;
+    if (!ancora) {
         botao.style.display = "none";
         return;
     }
 
-    const rect =
-        botaoEngrenagem.getBoundingClientRect();
-
-    botao.style.left =
-        (rect.left - 42) + "px";
-
-    botao.style.top =
-        (rect.top + rect.height / 2 - 17) + "px";
-
+    const rect = ancora.getBoundingClientRect();
+    const esquerda = Math.max(12, Math.min(rect.left - 42, window.innerWidth - 46));
+    const topo = Math.max(12, Math.min(rect.top + rect.height / 2 - 17, window.innerHeight - 46));
+    botao.style.left = esquerda + "px";
+    botao.style.top = topo + "px";
     botao.style.right = "auto";
-
     botao.style.display = "flex";
 
     if (
@@ -1149,6 +1107,15 @@ function posicionarBotao() {
     ) {
         posicionarPainel();
     }
+}
+
+let quadroPosicionamentoBotaoKMC = 0;
+function agendarPosicionamentoBotaoKMC() {
+    if (quadroPosicionamentoBotaoKMC) return;
+    quadroPosicionamentoBotaoKMC = requestAnimationFrame(() => {
+        quadroPosicionamentoBotaoKMC = 0;
+        posicionarBotao();
+    });
 }
 
 
@@ -1174,6 +1141,7 @@ function verificarPagina() {
         botao.style.display = "none";
         painel.style.display = "none";
         gifPainel.style.display = "none";
+        modalApoioKMC.style.display = "none";
 
         return;
     }
@@ -1191,6 +1159,18 @@ botao.addEventListener(
     evento => {
 
         evento.stopPropagation();
+
+        // Mensagens de runtime acordam o service worker MV3 quando ele está inativo.
+        try {
+            const runtime = globalThis.chrome && globalThis.chrome.runtime;
+            if (runtime && typeof runtime.sendMessage === "function") {
+                runtime.sendMessage({ tipo: "KMC_ACORDAR_SERVICE_WORKER" }, () => {
+                    void runtime.lastError;
+                });
+            }
+        } catch (erro) {
+            // Um contexto invalidado só pode ser recuperado ao atualizar a página.
+        }
 
         if (
             painel.style.display === "none"
@@ -1248,31 +1228,22 @@ const fecharApoioKMC = () => {
     modalApoioKMC.style.display = "none";
     botaoApoioKMC.focus();
 };
+
 botaoApoioKMC.addEventListener("click", evento => {
     evento.stopPropagation();
     modalApoioKMC.style.display = "flex";
     document.getElementById("kmc-coffee-close").focus();
 });
+
 document.getElementById("kmc-coffee-close").addEventListener("click", evento => {
     evento.stopPropagation();
     fecharApoioKMC();
 });
+
 modalApoioKMC.addEventListener("click", evento => {
     if (evento.target === modalApoioKMC) fecharApoioKMC();
 });
-modalApoioKMC.addEventListener("keydown", evento => {
-    if (evento.key !== "Tab") return;
-    const focaveis = modalApoioKMC.querySelectorAll('button:not([disabled]), a[href]');
-    const primeiro = focaveis[0];
-    const ultimo = focaveis[focaveis.length - 1];
-    if (evento.shiftKey && document.activeElement === primeiro) {
-        evento.preventDefault();
-        ultimo.focus();
-    } else if (!evento.shiftKey && document.activeElement === ultimo) {
-        evento.preventDefault();
-        primeiro.focus();
-    }
-});
+
 document.addEventListener("keydown", evento => {
     if (evento.key === "Escape" && modalApoioKMC.style.display === "flex") {
         fecharApoioKMC();
@@ -1291,6 +1262,7 @@ document.getElementById("kmc-gif-close").addEventListener("click", evento => {
     fecharPainelAnimado(gifPainel);
 });
 
+let gifKlipySelecionado = null;
 const campoBuscaGifsKMC = document.getElementById("kmc-gif-query");
 const resultadosGifsKMC = document.getElementById("kmc-gif-results");
 const statusBuscaGifsKMC = document.getElementById("kmc-gif-status");
@@ -1307,45 +1279,134 @@ botaoLimparBuscaGifsKMC.addEventListener("click", evento => {
     buscarGifsKMC();
 });
 
-function solicitarGifsKMC(consulta) {
-    const runtime = (typeof chrome !== "undefined" ? chrome.runtime : null);
+function solicitarGifsKMC(consulta, pagina = 1) {
+    const runtime = globalThis.chrome && globalThis.chrome.runtime;
     if (!runtime || typeof runtime.sendMessage !== "function") {
         return Promise.reject(new Error("Recarregue a extensão e a página da Kick."));
     }
 
     return new Promise((resolve, reject) => {
-        runtime.sendMessage({ tipo: "KMC_BUSCAR_GIFS", consulta }, resposta => {
-            const erro = runtime.lastError;
-            if (erro) return reject(new Error("Falha ao acessar a busca de GIFs."));
-            if (!resposta || !resposta.sucesso) {
-                return reject(new Error(resposta && resposta.erro || "Não foi possível buscar GIFs."));
-            }
-            resolve(Array.isArray(resposta.gifs) ? resposta.gifs : []);
-        });
+        try {
+            runtime.sendMessage({ tipo: "KMC_BUSCAR_GIFS", consulta, pagina }, resposta => {
+                const erro = runtime.lastError;
+                if (erro) {
+                    const detalhe = erro.message || "";
+                    const contextoInvalidado = /extension context invalidated|context invalidated/i.test(detalhe);
+                    return reject(new Error(contextoInvalidado
+                        ? "A extensão foi recarregada. Atualize a página do Kick e tente buscar novamente."
+                        : "A busca não conseguiu acordar o serviço da extensão. Tente novamente; se persistir, atualize a página do Kick."));
+                }
+                if (!resposta || !resposta.sucesso) {
+                    return reject(new Error(resposta && resposta.erro || "Não foi possível buscar GIFs."));
+                }
+                resolve({ gifs: Array.isArray(resposta.gifs) ? resposta.gifs : [], temMais: resposta.temMais === true });
+            });
+        } catch (erro) {
+            const detalhe = erro && erro.message ? erro.message : String(erro);
+            const contextoInvalidado = /extension context invalidated|context invalidated/i.test(detalhe);
+            reject(new Error(contextoInvalidado
+                ? "A extensão foi recarregada. Atualize a página do Kick e tente buscar novamente."
+                : "A busca não conseguiu acordar o serviço da extensão. Tente novamente; se persistir, atualize a página do Kick."));
+        }
     });
 }
 
-async function buscarGifsKMC() {
-    if (botaoBuscarGifsKMC.disabled) return;
-    const consulta = campoBuscaGifsKMC.value.trim() || "trending";
-    resultadosGifsKMC.replaceChildren();
+const resolucoesKlipyKMC = new Map();
 
+function solicitarUrlKlipyPorSlugKMC(slug, tipo = "slug") {
+    const chave = tipo + ":" + slug;
+    if (resolucoesKlipyKMC.has(chave)) return resolucoesKlipyKMC.get(chave);
+    const runtime = globalThis.chrome && globalThis.chrome.runtime;
+    if (!runtime || typeof runtime.sendMessage !== "function") {
+        return Promise.reject(new Error("Recarregue a extensão e a página da Kick."));
+    }
+
+    const pedido = new Promise((resolve, reject) => {
+        try {
+            runtime.sendMessage({ tipo: "KMC_KLIPY_RESOLVER", [tipo]: slug }, resposta => {
+                const erro = runtime.lastError;
+                if (erro) {
+                    const detalhe = erro.message || "";
+                    const contextoInvalidado = /extension context invalidated|context invalidated/i.test(detalhe);
+                    return reject(new Error(contextoInvalidado
+                        ? "A extensão foi recarregada. Atualize a página do Kick para continuar."
+                        : "Não foi possível acordar o serviço da extensão para recuperar este GIF. Tente novamente."));
+                }
+                if (!resposta?.sucesso || !codificarCodigoKlipy(resposta.url)) {
+                    return reject(new Error(resposta?.erro || "Não foi possível recuperar este GIF da KLIPY."));
+                }
+                resolve(resposta.url);
+            });
+        } catch (erro) {
+            const detalhe = erro && erro.message ? erro.message : String(erro);
+            const contextoInvalidado = /extension context invalidated|context invalidated/i.test(detalhe);
+            reject(new Error(contextoInvalidado
+                ? "A extensão foi recarregada. Atualize a página do Kick para continuar."
+                : "Não foi possível acordar o serviço da extensão para recuperar este GIF. Tente novamente."));
+        }
+    }).catch(erro => {
+        resolucoesKlipyKMC.delete(chave);
+        throw erro;
+    });
+
+    resolucoesKlipyKMC.set(chave, pedido);
+    if (resolucoesKlipyKMC.size > 100) {
+        resolucoesKlipyKMC.delete(resolucoesKlipyKMC.keys().next().value);
+    }
+    return pedido;
+}
+
+function resolverCodigoKlipyKMC(elemento, codigo, slug, legenda = { antes: "", depois: "" }, tipo = "slug") {
+    if (!elemento || elemento.dataset.kmcResolving === "true") return;
+    elemento.dataset.kmcResolving = "true";
+    solicitarUrlKlipyPorSlugKMC(slug, tipo).then(url => {
+        if (!elemento.isConnected || elemento.dataset.kmcProcessed === "true" || !elemento.textContent.includes(codigo)) return;
+        const imagem = criarImagemKlipy(url);
+        renderizarCodigoComMidia(elemento, codigo, url, imagem, true, legenda);
+    }).catch(() => {
+        // Mantém o código curto visível se a API estiver indisponível.
+    }).finally(() => {
+        if (elemento.dataset.kmcProcessed !== "true") delete elemento.dataset.kmcResolving;
+    });
+}
+
+let paginaGifsKMC = 0;
+let temMaisGifsKMC = false;
+let carregandoGifsKMC = false;
+let consultaGifsAtualKMC = "";
+
+async function buscarGifsKMC(proximaPagina = false) {
+    if (carregandoGifsKMC) return;
+    const consulta = campoBuscaGifsKMC.value.trim();
+    if (!proximaPagina) {
+        resultadosGifsKMC.replaceChildren();
+        paginaGifsKMC = 0;
+        temMaisGifsKMC = false;
+        consultaGifsAtualKMC = consulta;
+    } else if (!temMaisGifsKMC || consulta !== consultaGifsAtualKMC) {
+        return;
+    }
+
+    carregandoGifsKMC = true;
     botaoBuscarGifsKMC.disabled = true;
-    statusBuscaGifsKMC.textContent = campoBuscaGifsKMC.value.trim()
-        ? "Buscando GIFs…"
-        : "Carregando GIFs populares…";
+    statusBuscaGifsKMC.textContent = paginaGifsKMC === 0
+        ? (consulta ? "Buscando GIFs…" : "Carregando GIFs populares…")
+        : "Carregando mais GIFs…";
     try {
-        const gifs = await solicitarGifsKMC(consulta);
+        const pagina = paginaGifsKMC + 1;
+        const resposta = await solicitarGifsKMC(consulta, pagina);
+        const gifs = resposta.gifs;
         if (!gifs.length) {
-            statusBuscaGifsKMC.textContent = "Nenhum GIF encontrado.";
+            temMaisGifsKMC = false;
+            statusBuscaGifsKMC.textContent = paginaGifsKMC === 0 ? "Nenhum GIF encontrado." : "Clique em um GIF para preparar o envio.";
             return;
         }
 
-        statusBuscaGifsKMC.textContent = campoBuscaGifsKMC.value.trim()
-            ? "Clique em um GIF para preparar o envio."
-            : "GIFs populares — clique em um para preparar o envio.";
+        paginaGifsKMC = pagina;
+        temMaisGifsKMC = resposta.temMais;
+        statusBuscaGifsKMC.textContent = "Clique em um GIF para preparar o envio.";
         for (const gif of gifs) {
-            if (!gif || typeof gif.url !== "string" || !/^https:\/\/media[0-9]*\.giphy\.com\//i.test(gif.url)) continue;
+            if (!gif || typeof gif.url !== "string" || !codificarCodigoKlipy(gif.url, gif.slug, gif.id)) continue;
             const escolha = document.createElement("button");
             escolha.type = "button";
             escolha.title = gif.title || "Selecionar GIF";
@@ -1354,7 +1415,7 @@ async function buscarGifsKMC() {
 
             const imagem = document.createElement("img");
             imagem.src = gif.preview || gif.url;
-            imagem.alt = gif.title || "GIF do GIPHY";
+            imagem.alt = gif.title || "GIF da KLIPY";
             imagem.loading = "lazy";
             imagem.style.cssText = "display:block; width:100%; height:100px; object-fit:cover; border-radius:5px;";
             escolha.appendChild(imagem);
@@ -1362,6 +1423,9 @@ async function buscarGifsKMC() {
                 evento.stopPropagation();
                 const campoUrl = document.getElementById("kmc-url");
                 campoUrl.value = gif.url;
+                gifKlipySelecionado = { slug: gif.slug, id: gif.id, consulta: campoBuscaGifsKMC.value.trim(), url: gif.url };
+                resolucoesKlipyKMC.set("slug:" + gif.slug, Promise.resolve(gif.url));
+                if (gif.id) resolucoesKlipyKMC.set("id:" + gif.id, Promise.resolve(gif.url));
                 campoUrl.dispatchEvent(new Event("input", { bubbles: true }));
                 fecharPainelAnimado(gifPainel);
                 abrirPainelAnimado(painel);
@@ -1372,9 +1436,16 @@ async function buscarGifsKMC() {
     } catch (erro) {
         statusBuscaGifsKMC.textContent = erro.message || "Erro ao buscar GIFs.";
     } finally {
+        carregandoGifsKMC = false;
         botaoBuscarGifsKMC.disabled = false;
     }
 }
+
+resultadosGifsKMC.addEventListener("scroll", () => {
+    if (resultadosGifsKMC.scrollTop + resultadosGifsKMC.clientHeight >= resultadosGifsKMC.scrollHeight - 80) {
+        buscarGifsKMC(true);
+    }
+});
 
 document.getElementById("kmc-open-gifs").addEventListener("click", evento => {
     evento.stopPropagation();
@@ -1430,12 +1501,20 @@ function converterEnderecoParaTag(valor) {
         return valor;
     }
 
+    if (/^klp:/i.test(valor)) {
+        return decodificarCodigoKlipy(valor) || extrairSlugCodigoKlipy(valor) ? valor : null;
+    }
+
     if (
         /^tnr:[A-Za-z0-9_.-]+$/i.test(valor)
     ) {
         const id = decodificarCodigoTenor(valor);
         return id ? codificarCodigoTenor(id) : null;
     }
+
+    const gifKlipy = gifKlipySelecionado?.url === valor ? gifKlipySelecionado : null;
+    const codigoKlipy = codificarCodigoKlipy(valor, gifKlipy?.slug, gifKlipy?.id);
+    if (codigoKlipy) return codigoKlipy;
 
     if (
         /^KMCGIF_TNR_[A-Za-z0-9_.-]+$/i.test(valor)
@@ -2135,6 +2214,10 @@ function atualizarLinkColado() {
     const botaoCopiar = document.getElementById("kmc-copy-code");
     const valor = campo.value.trim();
 
+    if (gifKlipySelecionado && gifKlipySelecionado.url !== valor) {
+        gifKlipySelecionado = null;
+    }
+
     imagemSelecionada = null;
     limparImagemOriginalSelecionada();
     document.getElementById("kmc-file").value = "";
@@ -2157,6 +2240,38 @@ function atualizarLinkColado() {
     let media = null;
     if (/^gph:/i.test(tag)) {
         media = criarImagemGiphy(decodificarCodigoGiphy(tag) || tag.slice(4));
+    } else if (/^klp:/i.test(tag)) {
+        const url = decodificarCodigoKlipy(tag);
+        if (url) {
+            media = criarImagemKlipy(url);
+        } else {
+            const slug = extrairSlugCodigoKlipy(tag);
+            if (slug) {
+                solicitarUrlKlipyPorSlugKMC(slug).then(urlResolvida => {
+                    if (campo.value !== tag) return;
+                    const imagemResolvida = criarImagemKlipy(urlResolvida);
+                    imagemResolvida.style.maxWidth = "180px";
+                    imagemResolvida.style.maxHeight = "120px";
+                    imagemResolvida.style.borderRadius = "8px";
+                    imagemResolvida.style.display = "block";
+                    imagemResolvida.src = imagemResolvida.dataset.kmcSrc;
+                    const preview = document.getElementById("kmc-image-preview-media");
+                    preview.replaceChildren(imagemResolvida);
+                    atualizarPreviaMensagemKMC();
+                }).catch(() => {});
+            }
+        }
+    } else if (extrairIdCodigoKlipy(tag)) {
+        solicitarUrlKlipyPorSlugKMC(extrairIdCodigoKlipy(tag), "id").then(url => {
+            if (campo.value !== tag) return;
+            const imagem = criarImagemKlipy(url);
+            imagem.style.maxWidth = "180px";
+            imagem.style.maxHeight = "120px";
+            imagem.style.display = "block";
+            imagem.src = imagem.dataset.kmcSrc;
+            document.getElementById("kmc-image-preview-media").replaceChildren(imagem);
+            atualizarPreviaMensagemKMC();
+        }).catch(() => {});
     } else if (/^tnr:/i.test(tag)) {
         media = criarImagemTenor(decodificarCodigoTenor(tag));
     } else if (/^KMCGIF_TNR_/i.test(tag)) {
@@ -2334,8 +2449,14 @@ async function enviarImagemParaBackground(file) {
         return null;
     }
 
+    if (file.size > 20 * 1024 * 1024) {
+        erroUltimoUploadImagem = "A imagem é grande demais (máximo de 20 MB).";
+        alert(erroUltimoUploadImagem);
+        return null;
+    }
+
     // O content.js precisa estar carregado pela extensão para acessar chrome.runtime.
-    const runtime = (typeof chrome !== "undefined" ? chrome.runtime : null);
+    const runtime = globalThis.chrome && globalThis.chrome.runtime;
     if (!runtime || typeof runtime.sendMessage !== "function") {
         erroUltimoUploadImagem = "A extensão não conseguiu iniciar o envio. Recarregue-a e atualize a página.";
         console.error("KickMediaChat: chrome.runtime indisponível. Recarregue a extensão e confirme que content.js está declarado no manifest.json.");
@@ -2467,6 +2588,15 @@ function encontrarCampoChat() {
     })[0];
 }
 
+function campoAlvoEhChatKMC(campo) {
+    return Boolean(
+        campo instanceof Element &&
+        campo.matches(SELETOR_CAMPO_EDITAVEL) &&
+        !campo.closest("#kmc-panel, #kmc-gif-panel") &&
+        encontrarCampoChat() === campo
+    );
+}
+
 // Mantém marcado o editor real da Kick. O leitor de códigos deve ignorar
 // qualquer conteúdo digitado ou colado dentro da caixa de mensagem.
 function marcarCampoChatKMC() {
@@ -2520,8 +2650,10 @@ function codigoAindaEstaSendoDigitadoKMC(codigo) {
         return true;
     }
 
-    if (expiraEm && expiraEm > Date.now()) return true;
-    if (expiraEm) codigosColadosRecentementeKMC.delete(chave);
+    if (expiraEm !== undefined) {
+        if (expiraEm > Date.now()) return true;
+        codigosColadosRecentementeKMC.delete(chave);
+    }
 
     return aindaNoEditor;
 }
@@ -2817,6 +2949,19 @@ document.getElementById(
             );
 
         if (enviado) {
+            const compartilhamentoKlipy = gifKlipySelecionado;
+            if (compartilhamentoKlipy?.slug) {
+                chrome.runtime.sendMessage({
+                    tipo: "KMC_KLIPY_COMPARTILHADO",
+                    slug: compartilhamentoKlipy.slug,
+                    consulta: compartilhamentoKlipy.consulta
+                }, () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn("KICKShot: não foi possível registrar o compartilhamento na KLIPY.");
+                    }
+                });
+            }
+            gifKlipySelecionado = null;
 
             setTimeout(() => {
 
@@ -2846,6 +2991,7 @@ document.getElementById(
 
                 enviandoMensagem =
                     false;
+                procurarGifsNoChat();
 
             }, 200);
 
@@ -2865,7 +3011,7 @@ document.getElementById(
 
 
 // ========================================
-// GIPHY
+// KLIPY e compatibilidade com GIFs GIPHY antigos
 // ========================================
 
 function abrirMidiaAmpliadaKMC(midia) {
@@ -2991,6 +3137,18 @@ function criarImagemGiphy(id) {
             }
         };
 
+    return prepararCliqueParaAmpliarKMC(imagem);
+}
+
+function criarImagemKlipy(url) {
+    const imagem = document.createElement("img");
+    imagem.dataset.kmcMedia = "true";
+    imagem.dataset.kmcSrc = url;
+    imagem.alt = "GIF da KLIPY";
+    imagem.style.maxWidth = "220px";
+    imagem.style.maxHeight = "220px";
+    imagem.style.borderRadius = "8px";
+    imagem.style.display = "block";
     return prepararCliqueParaAmpliarKMC(imagem);
 }
 
@@ -3256,7 +3414,7 @@ function obterHashMidiaKMC(url) {
         return hashesMidiasKMC.get(url);
     }
 
-    const runtime = typeof chrome !== "undefined" ? chrome.runtime : null;
+    const runtime = globalThis.chrome && globalThis.chrome.runtime;
     if (!runtime || typeof runtime.sendMessage !== "function") {
         return Promise.reject(new Error("A extensão não está disponível para verificar esta mídia."));
     }
@@ -3423,24 +3581,35 @@ function renderizarCodigoComMidia(elemento, codigo, url, midia, clicavel = true,
         midia.src = fonteMidia;
     }
 
+    const codigoKlipy = /^klp:/i.test(codigo);
     const linkCodigo = document.createElement("span");
-    linkCodigo.textContent = codigo;
+    linkCodigo.textContent = codigoKlipy ? "KMC_KLIPY_GIF" : codigo;
     Object.assign(linkCodigo.style, {
         display: "inline-block",
-        maxWidth: "100%",
+        maxWidth: codigoKlipy ? "180px" : "100%",
         color: clicavel ? "#53fc18" : "#f1f1f1",
-        fontSize: "11px",
+        fontSize: codigoKlipy ? "9px" : "11px",
         lineHeight: "1.4",
         textDecoration: clicavel ? "underline" : "none",
-        overflowWrap: "anywhere",
+        overflowWrap: codigoKlipy ? "normal" : "anywhere",
+        whiteSpace: codigoKlipy ? "nowrap" : "normal",
+        overflow: codigoKlipy ? "hidden" : "visible",
+        textOverflow: codigoKlipy ? "ellipsis" : "clip",
         cursor: clicavel ? "pointer" : "text",
         userSelect: "text"
     });
+    if (codigoKlipy) linkCodigo.title = "Código completo da mídia KLIPY";
 
     if (clicavel) {
         linkCodigo.setAttribute("role", "link");
         linkCodigo.tabIndex = 0;
-        linkCodigo.title = "Abrir arquivo original";
+        linkCodigo.title = codigoKlipy ? "Abrir arquivo original; código completo ao copiar" : "Abrir arquivo original";
+        if (codigoKlipy) {
+            linkCodigo.addEventListener("copy", evento => {
+                evento.preventDefault();
+                evento.clipboardData?.setData("text/plain", codigo);
+            });
+        }
         linkCodigo.addEventListener("click", evento => {
             evento.preventDefault();
             evento.stopPropagation();
@@ -3655,7 +3824,7 @@ function processarElementoGif(elemento) {
     }
 
     if (
-        /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|img:https%3A%2F%2F.+)$/i.test(texto) &&
+        /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|gph:[A-Za-z0-9_.-]+|tnr:[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]+|img:https%3A%2F%2F.+)$/i.test(texto) &&
         codigoAindaEstaSendoDigitadoKMC(texto)
     ) {
         return false;
@@ -3667,7 +3836,7 @@ function processarElementoGif(elemento) {
     // ====================================
 
     if (
-        /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+)$/i.test(texto)
+        /^(?!KMC_KLP[0-9a-z]{1,13}_GIF$)(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+)$/i.test(texto)
     ) {
 
         return processarCodigoKMC(
@@ -3699,6 +3868,25 @@ function processarElementoGif(elemento) {
 
         renderizarCodigoComMidia(elemento, texto, imagem.src, imagem, true, legenda);
 
+        return true;
+    }
+
+    const urlKlipy = decodificarCodigoKlipy(texto);
+    if (urlKlipy) {
+        const imagem = criarImagemKlipy(urlKlipy);
+        renderizarCodigoComMidia(elemento, texto, urlKlipy, imagem, true, legenda);
+        return true;
+    }
+
+    const idKlipy = extrairIdCodigoKlipy(texto);
+    if (idKlipy) {
+        resolverCodigoKlipyKMC(elemento, texto, idKlipy, legenda, "id");
+        return true;
+    }
+
+    const slugKlipy = extrairSlugCodigoKlipy(texto);
+    if (slugKlipy) {
+        resolverCodigoKlipyKMC(elemento, texto, slugKlipy, legenda);
         return true;
     }
 
@@ -3767,6 +3955,11 @@ function procurarGifDentroElemento(
 ) {
 
     if (codigoColadoAguardandoEnvioKMC) {
+        return;
+    }
+
+    // Saída rápida: evita varrer centenas de nós quando o texto não contém nenhum código de mídia.
+    if (elemento && elemento.nodeType === 1 && !/KMC_|KMCIMG_|KMCGIF_|gph:|tnr:|klp:|img:https%3A/i.test(elemento.textContent || "")) {
         return;
     }
 
@@ -3865,7 +4058,7 @@ function procurarGifDentroElemento(
             (no.nodeValue || "").trim();
 
         if (
-            /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+)$/i.test(
+            /^(?:KMC_[A-Za-z0-9_.-]+[._](?:IMG|GIF)|KMCIMG_[A-Za-z0-9_.-]+|KMCGIF_TNR_[A-Za-z0-9_.-]+|klp:[A-Za-z0-9_-]+)$/i.test(
                 texto
             )
         ) {
@@ -3882,6 +4075,30 @@ function procurarGifDentroElemento(
 
         const codigo =
             textoNode.nodeValue.trim();
+
+        const urlKlipy = decodificarCodigoKlipy(codigo);
+        if (urlKlipy) {
+            const pai = textoNode.parentElement;
+            if (pai && pai.dataset.kmcProcessed !== "true") {
+                renderizarCodigoComMidia(pai, codigo, urlKlipy, criarImagemKlipy(urlKlipy));
+            }
+            continue;
+        }
+
+        const idKlipy = extrairIdCodigoKlipy(codigo);
+        if (idKlipy) {
+            const pai = textoNode.parentElement;
+            if (pai && pai.dataset.kmcProcessed !== "true") resolverCodigoKlipyKMC(pai, codigo, idKlipy, undefined, "id");
+            continue;
+        }
+        const slugKlipy = extrairSlugCodigoKlipy(codigo);
+        if (slugKlipy) {
+            const pai = textoNode.parentElement;
+            if (pai && pai.dataset.kmcProcessed !== "true") {
+                resolverCodigoKlipyKMC(pai, codigo, slugKlipy);
+            }
+            continue;
+        }
 
         if (/^KMCGIF_TNR_/i.test(codigo)) {
             const pai = textoNode.parentElement;
@@ -3933,8 +4150,9 @@ function procurarGifDentroElemento(
 const observadorChat =
     new MutationObserver(
         mutations => {
-
-            marcarCampoChatKMC();
+            if (campoCodigoColadoKMC && !campoCodigoColadoKMC.isConnected) {
+                reconciliarProtecaoDeCodigoColadoKMC();
+            }
 
             for (
                 const mutation of mutations
@@ -3986,6 +4204,8 @@ const observadorChat =
                     }
                 }
             }
+
+            agendarPosicionamentoBotaoKMC();
         }
     );
 
@@ -4048,11 +4268,6 @@ let ultimaPagina =
     window.location.href;
 
 setInterval(() => {
-
-    verificarPagina();
-
-    procurarGifsNoChat();
-
     if (
         window.location.href !==
         ultimaPagina
@@ -4060,6 +4275,9 @@ setInterval(() => {
 
         ultimaPagina =
             window.location.href;
+
+        verificarPagina();
+        reconciliarProtecaoDeCodigoColadoKMC();
 
         fecharPainelAnimado(painel);
         fecharPainelAnimado(gifPainel);
@@ -4071,6 +4289,8 @@ setInterval(() => {
 
         enviandoMensagem =
             false;
+
+        setTimeout(procurarGifsNoChat, 300);
     }
 
 }, 1500);
@@ -4107,12 +4327,87 @@ if (typeof ResizeObserver !== "undefined") {
 }
 
 verificarPagina();
+marcarCampoChatKMC();
+procurarGifsNoChat();
+    }
 
+    function solicitarConsentimentoKMC() {
+        const mostrar = () => {
+            if (!document.body || document.getElementById("kmc-consent-overlay")) return;
+            const estilo = document.createElement("style");
+            estilo.textContent = `
+                #kmc-consent-overlay { position:fixed!important; inset:0!important; z-index:2147483647!important; display:flex!important; align-items:center!important; justify-content:center!important; padding:18px!important; background:rgba(0,0,0,.78)!important; font-family:Arial,system-ui,sans-serif!important; color:#f4f4f5!important; }
+                #kmc-consent-card { box-sizing:border-box!important; width:min(520px,100%)!important; max-height:calc(100vh - 36px)!important; overflow:auto!important; padding:22px!important; border:1px solid #45454b!important; border-radius:14px!important; background:#18181b!important; box-shadow:0 16px 48px rgba(0,0,0,.55)!important; }
+                #kmc-consent-card * { box-sizing:border-box!important; }
+                #kmc-consent-card h2 { margin:0 0 12px!important; color:#fff!important; font:700 20px/1.3 Arial,system-ui,sans-serif!important; }
+                #kmc-consent-card p, #kmc-consent-card li { color:#e4e4e7!important; font:14px/1.5 Arial,system-ui,sans-serif!important; }
+                #kmc-consent-card ul { margin:10px 0 14px!important; padding-left:22px!important; }
+                #kmc-consent-card label { display:flex!important; align-items:flex-start!important; gap:9px!important; margin:16px 0!important; color:#fff!important; font:14px/1.45 Arial,system-ui,sans-serif!important; }
+                #kmc-consent-card input { margin-top:3px!important; accent-color:#53fc18!important; }
+                #kmc-consent-card button { min-height:42px!important; padding:9px 14px!important; border:1px solid #555!important; border-radius:8px!important; background:#29292e!important; color:#fff!important; font:600 14px Arial,system-ui,sans-serif!important; cursor:pointer!important; }
+                #kmc-consent-card #kmc-consent-accept { border-color:#53fc18!important; background:#53fc18!important; color:#101010!important; }
+                #kmc-consent-card button:disabled { opacity:.5!important; cursor:not-allowed!important; }
+                #kmc-consent-actions { display:flex!important; justify-content:flex-end!important; gap:10px!important; flex-wrap:wrap!important; }
+                #kmc-consent-error { min-height:18px!important; color:#ff9b9b!important; font-size:13px!important; }
+            `;
+            const overlay = document.createElement("div");
+            overlay.id = "kmc-consent-overlay";
+            overlay.innerHTML = `
+                <section id="kmc-consent-card" role="dialog" aria-modal="true" aria-labelledby="kmc-consent-title" aria-describedby="kmc-consent-description" tabindex="-1">
+                    <h2 id="kmc-consent-title">Antes de usar o KICKShot</h2>
+                    <p id="kmc-consent-description">Para funcionar, a extensão trata alguns dados desta forma:</p>
+                    <ul>
+                        <li>Lê localmente o conteúdo da página da Kick para localizar códigos de mídia e exibir as imagens ou GIFs correspondentes.</li>
+                        <li>Para buscar GIFs, envia o termo de busca e um identificador aleatório da instalação a um servidor intermediário do KICKShot (hospedado na Cloudflare), que repassa o pedido à KLIPY; ao compartilhar um GIF, envia também o identificador do GIF e o termo da busca pelo mesmo caminho para registrar o compartilhamento. Esse servidor apenas repassa os pedidos e não foi feito para guardar o seu histórico.</li>
+                        <li>Envia ao Catbox as imagens que você selecionar para hospedar e compartilhar no chat.</li>
+                        <li>Carrega a figurinha do cabeçalho do 7TV e mídias diretamente dos serviços correspondentes.</li>
+                    </ul>
+                    <p>O KICKShot não envia o histórico do chat a nenhum servidor. Ao marcar a opção e continuar, você concorda com esses usos para fornecer os recursos da extensão.</p>
+                    <label><input id="kmc-consent-check" type="checkbox"><span>Li e concordo com o uso de dados descrito acima.</span></label>
+                    <p id="kmc-consent-error" role="status" aria-live="polite"></p>
+                    <div id="kmc-consent-actions">
+                        <button id="kmc-consent-reject" type="button">Agora não</button>
+                        <button id="kmc-consent-accept" type="button" disabled>Concordo e continuar</button>
+                    </div>
+                </section>`;
+            document.head.appendChild(estilo);
+            document.body.appendChild(overlay);
+            const caixa = overlay.querySelector("#kmc-consent-card");
+            const checkbox = overlay.querySelector("#kmc-consent-check");
+            const aceitar = overlay.querySelector("#kmc-consent-accept");
+            const erro = overlay.querySelector("#kmc-consent-error");
+            checkbox.addEventListener("change", () => { aceitar.disabled = !checkbox.checked; });
+            aceitar.addEventListener("click", () => {
+                if (!checkbox.checked || aceitar.disabled) return;
+                aceitar.disabled = true;
+                chrome.storage.local.set({ [CHAVE_CONSENTIMENTO_KMC]: VERSAO_CONSENTIMENTO_KMC }, () => {
+                    if (chrome.runtime.lastError) {
+                        erro.textContent = "Não foi possível salvar sua escolha. Recarregue a página e tente novamente.";
+                        aceitar.disabled = !checkbox.checked;
+                        return;
+                    }
+                    overlay.remove();
+                    estilo.remove();
+                    iniciarKICKShot();
+                });
+            });
+            overlay.querySelector("#kmc-consent-reject").addEventListener("click", () => {
+                overlay.remove();
+                estilo.remove();
+                globalThis.__KICKSHOT_CONSENT_UI_STARTED__ = false;
+            });
+            caixa.focus();
+        };
+        if (document.body) mostrar();
+        else document.addEventListener("DOMContentLoaded", mostrar, { once: true });
+    }
 
-
-
-
-
-
-
+    chrome.storage.local.get([CHAVE_CONSENTIMENTO_KMC], dados => {
+        if (chrome.runtime.lastError) {
+            solicitarConsentimentoKMC();
+            return;
+        }
+        if (dados?.[CHAVE_CONSENTIMENTO_KMC] === VERSAO_CONSENTIMENTO_KMC) iniciarKICKShot();
+        else solicitarConsentimentoKMC();
+    });
 })();

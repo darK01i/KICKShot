@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "KICKShot",
-  "version": "1.0.9",
+  "version": "1.0.14",
+  "minimum_chrome_version": "111",
   "description": "Compartilhamento de imagens e visualização de mídias no chat da Kick",
   "icons": {
     "16": "icons/icon16.png",
@@ -10,8 +11,13 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["icons/qr-vaquinha-livepix-gg.png"],
-      "matches": ["https://kick.com/*"]
+      "resources": [
+        "icons/qr-vaquinha-livepix-gg.png",
+        "icons/klipy-logo.png"
+      ],
+      "matches": [
+        "https://kick.com/*"
+      ]
     }
   ],
   "host_permissions": [
@@ -24,13 +30,16 @@
     "https://media.tenor.com/*",
     "https://c.tenor.com/*",
     "https://media1.tenor.com/*",
-    "https://kickshot-giphy.darkartz75.workers.dev/*"
+    "https://static.klipy.com/*",
+    "https://static1.klipy.com/*",
+    "https://static2.klipy.com/*",
+    "https://kickshot-klipy.darkartz75.workers.dev/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "permissions": [
-    "scripting"
+    "storage"
   ],
   "content_scripts": [
     {
