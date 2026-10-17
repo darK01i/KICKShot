@@ -1,19 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KICKShot",
-  "version": "1.0.9",
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "kickshot@darkartz75",
-      "data_collection_permissions": {
-        "required": [
-          "searchTerms",
-          "websiteContent"
-        ],
-        "optional": []
-      }
-    }
-  },
+  "version": "1.0.14",
   "description": "Compartilhamento de imagens e visualização de mídias no chat da Kick",
   "icons": {
     "16": "icons/icon16.png",
@@ -22,11 +10,17 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["icons/qr-vaquinha-livepix-gg.png"],
-      "matches": ["https://kick.com/*"]
+      "resources": [
+        "icons/qr-vaquinha-livepix-gg.png",
+        "icons/klipy-logo.png"
+      ],
+      "matches": [
+        "https://kick.com/*"
+      ]
     }
   ],
   "host_permissions": [
+    "https://kick.com/*",
     "https://catbox.moe/*",
     "https://files.catbox.moe/*",
     "https://media.giphy.com/*",
@@ -35,13 +29,19 @@
     "https://media.tenor.com/*",
     "https://c.tenor.com/*",
     "https://media1.tenor.com/*",
-    "https://kickshot-giphy.darkartz75.workers.dev/*"
+    "https://static.klipy.com/*",
+    "https://static1.klipy.com/*",
+    "https://static2.klipy.com/*",
+    "https://kickshot-klipy.darkartz75.workers.dev/*"
   ],
   "background": {
     "scripts": [
       "background.js"
     ]
   },
+  "permissions": [
+    "storage"
+  ],
   "content_scripts": [
     {
       "matches": [
@@ -54,5 +54,17 @@
       "run_at": "document_idle",
       "world": "ISOLATED"
     }
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "kickshot@darkartz75",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "searchTerms",
+          "websiteContent"
+        ]
+      }
+    }
+  }
 }
