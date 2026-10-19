@@ -7,9 +7,27 @@
         root.KICKShotMediaCodes = api;
     }
 })(globalThis, function () {
+    // Códigos exclusivos do teste: preservam o caminho original do ImgBB.
+    function validarImagemImgBB(endereco) {
+        return endereco.protocol === "https:" && endereco.hostname === "i.ibb.co" &&
+            !endereco.username && !endereco.password && !endereco.port && !endereco.search && !endereco.hash &&
+            /^\/[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+$/.test(endereco.pathname) && endereco.pathname.length <= 220;
+    }
+    const EXTENSOES_IBB = Object.freeze({ j: "jpg", e: "jpeg", p: "png", g: "gif", w: "webp", a: "avif", b: "bmp", i: "ico", s: "svg", n: "apng" });
+    const TIPOS_IBB = Object.fromEntries(Object.entries(EXTENSOES_IBB).map(([tipo, extensao]) => [extensao, tipo]));
     function codificarImagem(url) {
         try {
             const endereco = new URL(url);
+            if (validarImagemImgBB(endereco)) {
+                const partes = endereco.pathname.slice(1).split("/");
+                const sufixo = /\.gif$/i.test(partes[1]) ? "_GIF" : "_IMG";
+                const curto = partes[1].match(/^i\.([a-z]+)$/);
+                if (/^[A-Za-z0-9]{1,32}$/.test(partes[0]) && curto && TIPOS_IBB[curto[1]]) {
+                    return "KMC_B" + partes[0] + TIPOS_IBB[curto[1]] + sufixo;
+                }
+                // URLs anteriores ou nomes diferentes: conserva o caminho sem Base64.
+                return "KMC_I" + partes[0] + "." + partes[1] + sufixo;
+            }
             if (endereco.protocol !== "https:" || endereco.hostname !== "files.catbox.moe") return null;
             const nomeArquivo = decodeURIComponent(endereco.pathname.slice(1));
             if (!/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9]{1,10})?$/.test(nomeArquivo)) return null;
@@ -24,6 +42,23 @@
 
     function decodificarImagem(codigo) {
         if (typeof codigo !== "string") return null;
+        const curtoIBB = codigo.match(/^B([A-Za-z0-9]{1,32})([jepgwabisn])$/);
+        if (curtoIBB) return "https://i.ibb.co/" + curtoIBB[1] + "/i." + EXTENSOES_IBB[curtoIBB[2]];
+        const caminhoIBB = codigo.match(/^I([A-Za-z0-9_-]+)\.([A-Za-z0-9_.-]+)$/);
+        if (caminhoIBB) {
+            try {
+                const endereco = new URL("https://i.ibb.co/" + caminhoIBB[1] + "/" + caminhoIBB[2]);
+                return validarImagemImgBB(endereco) ? endereco.href : null;
+            } catch { return null; }
+        }
+        if (/^IBB_[A-Za-z0-9_-]{1,300}$/.test(codigo)) {
+            try {
+                let token = codigo.slice(4).replace(/-/g, "+").replace(/_/g, "/");
+                token += "=".repeat((4 - token.length % 4) % 4);
+                const endereco = new URL("https://i.ibb.co" + atob(token));
+                return validarImagemImgBB(endereco) ? endereco.href : null;
+            } catch { return null; }
+        }
 
         // Códigos antigos usam Base64URL; códigos curtos novos não devem passar por essa conversão.
         if (/^aHR0cHM[A-Za-z0-9_-]*$/.test(codigo) && codigo.length % 4 !== 1) {
@@ -40,7 +75,7 @@
         }
 
         // Formato curto: identificador e extensão separados por sublinhado.
-        const curto = codigo.match(/^([A-Za-z0-9_-]+)_(gif|png|jpe?g|webp|avif|heic|mp4|webm|mov)$/i);
+        const curto = codigo.match(/^([A-Za-z0-9_-]+)_(gif|png|apng|jpe?g|jpe|jfif|webp|avif|bmp|ico|cur|svg|heic|mp4|webm|mov)$/i);
         if (curto) return "https://files.catbox.moe/" + curto[1] + "." + curto[2];
 
         return null;

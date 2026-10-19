@@ -6,7 +6,7 @@
     globalThis.__KICKSHOT_CONSENT_UI_STARTED__ = true;
 
     const CHAVE_CONSENTIMENTO_KMC = "kmcPrivacyConsentVersion";
-    const VERSAO_CONSENTIMENTO_KMC = 2;
+    const VERSAO_CONSENTIMENTO_KMC = 3;
 
     function iniciarKICKShot() {
         if (globalThis.__KICKSHOT_CONTENT_SCRIPT_STARTED__) return;
@@ -617,7 +617,7 @@ painel.innerHTML = `
     <input
         id="kmc-file"
         type="file"
-        accept="image/*"
+        accept="image/*,.png,.apng,.jpg,.jpeg,.jpe,.jfif,.gif,.webp,.avif,.bmp,.ico,.cur,.svg"
         style="display:none;"
     >
 
@@ -699,7 +699,7 @@ painel.innerHTML = `
         📤 Enviar
     </button>
     <p style="margin:8px 0 0; color:#c4c4cc; font-size:11px; line-height:1.5; text-align:left;">
-        <strong>Aviso:</strong> Não envie conteúdo ilegal ou que viole os direitos de terceiros. Você é responsável pelas imagens que compartilha. As imagens enviadas do seu dispositivo são hospedadas pelo Catbox e devem seguir as regras da plataforma.
+        <strong>Aviso:</strong> Não envie conteúdo ilegal ou que viole os direitos de terceiros. Você é responsável pelas imagens que compartilha. As imagens do seu dispositivo passam pelo servidor do KICKShot na Cloudflare e são hospedadas no ImgBB com exclusão solicitada após 3 minutos.
     </p>
 `;
 
@@ -1203,12 +1203,12 @@ painel.addEventListener("paste", evento => {
     if (!areaTransferencia) return;
 
     const itemImagem = Array.from(areaTransferencia.items || []).find(
-        item => item.kind === "file" && item.type.startsWith("image/")
+        item => item.kind === "file" && obterMimeImagemKMC(item.getAsFile())
     );
     const arquivoImagem =
         itemImagem?.getAsFile() ||
         Array.from(areaTransferencia.files || []).find(
-            arquivo => arquivo.type.startsWith("image/")
+            arquivo => obterMimeImagemKMC(arquivo)
         );
 
     if (!arquivoImagem) return;
@@ -1701,10 +1701,15 @@ function converterEnderecoParaTag(valor) {
         return tag;
     }
 
+    try {
+        const endereco = new URL(valor);
+        if (endereco.hostname === "i.ibb.co") return codificarImagem(endereco.href);
+    } catch {}
+
     // Links diretos do Catbox podem ser preparados como imagem/vídeo também.
     try {
         const endereco = new URL(valor);
-        const extensao = endereco.pathname.match(/\.(gif|png|jpe?g|webp|avif|mp4|webm|mov)$/i);
+        const extensao = endereco.pathname.match(/\.(gif|png|apng|jpe?g|jpe|jfif|webp|avif|bmp|ico|cur|svg|mp4|webm|mov)$/i);
         if (
             endereco.protocol === "https:" &&
             endereco.hostname.toLowerCase() === "files.catbox.moe" &&
@@ -1754,7 +1759,28 @@ function limparImagemOriginalSelecionada() {
     imagemFoiEditada = false;
 }
 
+function obterMimeImagemKMC(file) {
+    if (!file) return "";
+    const tipo = String(file.type || "").toLowerCase().split(";")[0].trim();
+    const aliases = { "image/jpg": "image/jpeg", "image/pjpeg": "image/jpeg", "image/x-png": "image/png", "image/x-ms-bmp": "image/bmp" };
+    if (/^image\/[a-z0-9.+-]+$/.test(tipo)) return aliases[tipo] || tipo;
+    // Arquivos arrastados ou copiados podem vir sem MIME no sistema operacional.
+    if (tipo && tipo !== "application/octet-stream" && tipo !== "binary/octet-stream") return "";
+    const extensao = String(file.name || "").split(".").pop().toLowerCase();
+    return ({ png: "image/png", apng: "image/apng", jpg: "image/jpeg", jpeg: "image/jpeg", jpe: "image/jpeg", jfif: "image/jpeg", gif: "image/gif", webp: "image/webp", avif: "image/avif", bmp: "image/bmp", ico: "image/x-icon", cur: "image/x-icon", svg: "image/svg+xml" })[extensao] || "";
+}
+
+function normalizarArquivoImagemKMC(file) {
+    const mime = obterMimeImagemKMC(file);
+    if (!mime) return null;
+    if (file.type === mime && file.name) return file;
+    const extensao = ({ "image/png": "png", "image/apng": "apng", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp", "image/avif": "avif", "image/bmp": "bmp", "image/x-icon": "ico", "image/vnd.microsoft.icon": "ico", "image/svg+xml": "svg" })[mime] || "img";
+    // Só corrige os metadados: mantém os bytes e a animação originais.
+    return new File([file], file.name || "imagem." + extensao, { type: mime, lastModified: file.lastModified || Date.now() });
+}
+
 function mostrarPreviewImagem(file) {
+    file = normalizarArquivoImagemKMC(file);
     if (!file || !file.type || !file.type.startsWith("image/")) {
         alert("Escolha um arquivo de imagem.");
         return false;
@@ -2282,7 +2308,7 @@ function atualizarLinkColado() {
     } else if (/^img:https%3A/i.test(tag)) {
         try {
             const url = decodeURIComponent(tag.slice(4));
-            if (/^https:\/\/files\.catbox\.moe\//i.test(url)) {
+            if (/^https:\/\/(?:files\.catbox\.moe|i\.ibb\.co)\//i.test(url)) {
                 media = criarImagemEnviada(url);
             }
         } catch (erro) {
@@ -2442,6 +2468,7 @@ areaDrop.addEventListener(
 // ========================================
 
 async function enviarImagemParaBackground(file) {
+    file = normalizarArquivoImagemKMC(file);
     erroUltimoUploadImagem = "";
     if (!file || !file.type || !file.type.startsWith("image/")) {
         erroUltimoUploadImagem = "O arquivo precisa ser uma imagem válida.";
@@ -2466,13 +2493,24 @@ async function enviarImagemParaBackground(file) {
 
     let dadosBase64;
     try {
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        let binario = "";
-        const tamanhoBloco = 0x8000;
-        for (let inicio = 0; inicio < bytes.length; inicio += tamanhoBloco) {
-            binario += String.fromCharCode(...bytes.subarray(inicio, inicio + tamanhoBloco));
-        }
-        dadosBase64 = btoa(binario);
+        // FileReader mantém a leitura nativa do arquivo no contexto isolado do
+        // Firefox, sem acessar construtores de ArrayBuffer através de Xrays.
+        dadosBase64 = await new Promise((resolve, reject) => {
+            const leitor = new FileReader();
+            leitor.onload = () => {
+                const resultado = typeof leitor.result === "string" ? leitor.result : "";
+                const cabecalho = resultado.match(/^data:[^,]*;base64,/i);
+                const conteudo = cabecalho ? resultado.slice(cabecalho[0].length) : "";
+                if (!conteudo) {
+                    reject(new Error("O navegador não conseguiu ler os dados da imagem."));
+                    return;
+                }
+                resolve(conteudo);
+            };
+            leitor.onerror = () => reject(leitor.error || new Error("Falha ao ler a imagem."));
+            leitor.onabort = () => reject(new Error("A leitura da imagem foi interrompida."));
+            leitor.readAsDataURL(file);
+        });
     } catch (erro) {
         erroUltimoUploadImagem = "Não foi possível preparar a imagem.";
         console.error("KickMediaChat: não foi possível preparar a imagem:", erro);
@@ -3303,6 +3341,10 @@ function criarImagemEnviada(url) {
     imagem.alt =
         "Imagem";
 
+    if (/^https:\/\/i\.ibb\.co\//i.test(url)) {
+        imagem.addEventListener("error", () => { imagem.alt = "Imagem expirada ou indisponível"; });
+    }
+
     imagem.style.maxWidth =
         "220px";
 
@@ -3705,7 +3747,7 @@ function processarCodigoKMC(
 
     if (
         !url ||
-        !/^https:\/\/files\.catbox\.moe\//i.test(
+        !/^https:\/\/(?:files\.catbox\.moe|i\.ibb\.co)\//i.test(
             url
         )
     ) {
@@ -3925,7 +3967,7 @@ function processarElementoGif(elemento) {
             );
 
         if (
-            !/^https:\/\/files\.catbox\.moe\//i.test(
+            !/^https:\/\/(?:files\.catbox\.moe|i\.ibb\.co)\//i.test(
                 url
             )
         ) {
@@ -4115,7 +4157,7 @@ function procurarGifDentroElemento(
 
         if (
             !url ||
-            !/^https:\/\/files\.catbox\.moe\//i.test(
+            !/^https:\/\/(?:files\.catbox\.moe|i\.ibb\.co)\//i.test(
                 url
             )
         ) {
@@ -4359,10 +4401,11 @@ procurarGifsNoChat();
                     <ul>
                         <li>Lê localmente o conteúdo da página da Kick para localizar códigos de mídia e exibir as imagens ou GIFs correspondentes.</li>
                         <li>Para buscar GIFs, envia o termo de busca e um identificador aleatório da instalação a um servidor intermediário do KICKShot (hospedado na Cloudflare), que repassa o pedido à KLIPY; ao compartilhar um GIF, envia também o identificador do GIF e o termo da busca pelo mesmo caminho para registrar o compartilhamento. Esse servidor apenas repassa os pedidos e não foi feito para guardar o seu histórico.</li>
-                        <li>Envia ao Catbox as imagens que você selecionar para hospedar e compartilhar no chat.</li>
-                        <li>Carrega a figurinha do cabeçalho do 7TV e mídias diretamente dos serviços correspondentes.</li>
+                        <li>Envia as imagens selecionadas ao servidor intermediário do KICKShot na Cloudflare, que as hospeda no ImgBB com exclusão solicitada após 3 minutos; a remoção pelo serviço pode atrasar. Imagens já carregadas podem permanecer no navegador até recarregar a página.</li>
+                        <li>Carrega a figurinha do cabeçalho do 7TV, fontes do Google Fonts e mídias diretamente dos serviços correspondentes. Esses serviços recebem dados técnicos da conexão.</li>
                     </ul>
                     <p>O KICKShot não envia o histórico do chat a nenhum servidor. Ao marcar a opção e continuar, você concorda com esses usos para fornecer os recursos da extensão.</p>
+                    <p><a id="kmc-consent-privacy" target="_blank" rel="noopener noreferrer" style="color:#8dff68">Política de privacidade</a></p>
                     <label><input id="kmc-consent-check" type="checkbox"><span>Li e concordo com o uso de dados descrito acima.</span></label>
                     <p id="kmc-consent-error" role="status" aria-live="polite"></p>
                     <div id="kmc-consent-actions">
@@ -4371,6 +4414,7 @@ procurarGifsNoChat();
                     </div>
                 </section>`;
             document.head.appendChild(estilo);
+            overlay.querySelector("#kmc-consent-privacy").href = chrome.runtime.getURL("privacy.html");
             document.body.appendChild(overlay);
             const caixa = overlay.querySelector("#kmc-consent-card");
             const checkbox = overlay.querySelector("#kmc-consent-check");

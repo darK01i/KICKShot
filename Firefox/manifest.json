@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
   "name": "KICKShot",
-  "version": "1.0.14",
-  "description": "Compartilhamento de imagens e visualização de mídias no chat da Kick",
+  "version": "1.0.16",
+  "minimum_chrome_version": "121",
+  "description": "Compartilhe imagens temporárias e GIFs e visualize mídias no chat da Kick.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -12,7 +13,8 @@
     {
       "resources": [
         "icons/qr-vaquinha-livepix-gg.png",
-        "icons/klipy-logo.png"
+        "icons/klipy-logo.png",
+        "privacy.html"
       ],
       "matches": [
         "https://kick.com/*"
@@ -21,7 +23,6 @@
   ],
   "host_permissions": [
     "https://kick.com/*",
-    "https://catbox.moe/*",
     "https://files.catbox.moe/*",
     "https://media.giphy.com/*",
     "https://media1.giphy.com/*",
@@ -32,9 +33,12 @@
     "https://static.klipy.com/*",
     "https://static1.klipy.com/*",
     "https://static2.klipy.com/*",
+    "https://i.ibb.co/*",
+    "https://kickshot-imgbb-teste.darkartz75.workers.dev/*",
     "https://kickshot-klipy.darkartz75.workers.dev/*"
   ],
   "background": {
+    "service_worker": "background.js",
     "scripts": [
       "background.js"
     ]
@@ -61,8 +65,10 @@
       "strict_min_version": "140.0",
       "data_collection_permissions": {
         "required": [
+          "websiteContent",
           "searchTerms",
-          "websiteContent"
+          "websiteActivity",
+          "personallyIdentifyingInfo"
         ]
       }
     }
