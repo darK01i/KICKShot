@@ -1,29 +1,24 @@
 <!doctype html>
-<html lang="pt-BR">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Privacidade — KICKShot</title>
-<style>body{font:16px/1.6 system-ui,sans-serif;max-width:850px;margin:40px auto;padding:0 22px;color:#222}h1,h2{line-height:1.3}a{color:#1263b5}</style>
-<main>
-<h1>Política de privacidade da KICKShot</h1>
-<p>Versão 1.0.14. Atualizada em 17 de outubro de 2026.</p>
-<p>A KICKShot permite compartilhar imagens e GIFs e visualizar códigos de mídia compatíveis no chat da Kick. Esta política descreve os dados tratados pela extensão e pelos serviços utilizados.</p>
-<h2>Conteúdo da Kick e armazenamento local</h2>
-<p>A extensão lê localmente elementos da página da Kick para reconhecer códigos de mídia, mostrar imagens e inserir o texto escolhido pelo usuário no campo do chat. Ela não envia o histórico completo do chat a um servidor próprio. Mensagens que você decidir enviar ficam sujeitas às regras e à política da Kick.</p>
-<p>O navegador guarda a escolha de consentimento, um identificador aleatório da instalação, preferências de posição dos painéis e dados de mídias bloqueadas, incluindo códigos e hashes. Esses dados não incluem sua senha da Kick. Você pode remover os dados locais desinstalando a extensão e, para preferências armazenadas na página, limpando os dados locais da Kick.</p>
-<h2>Busca e compartilhamento de GIFs</h2>
-<p>Ao buscar GIFs, o termo de busca, a página solicitada e o identificador aleatório da instalação são enviados ao servidor intermediário da KICKShot em <code>kickshot-klipy.darkartz75.workers.dev</code>, hospedado na Cloudflare. Ele encaminha os pedidos à KLIPY. Ao compartilhar um GIF da busca, são enviados também o identificador do GIF e o termo da busca para registrar o compartilhamento. A chave de acesso da KLIPY é tratada no servidor, não é incluída neste pacote da extensão.</p>
-<p>Imagens de prévia e GIFs são carregados dos endereços de mídia fornecidos pelos serviços. Por isso, a KLIPY e os demais provedores envolvidos recebem as solicitações de rede necessárias. O servidor intermediário utiliza a infraestrutura da Cloudflare; os registros técnicos dessa infraestrutura estão sujeitos às configurações do serviço e às políticas aplicáveis.</p>
-<h2>Upload e visualização de imagens</h2>
-<p>Arquivos selecionados, colados ou arrastados pelo usuário para envio são enviados ao Catbox, com o nome do arquivo e o tipo de imagem, para hospedagem. O endereço retornado pode ser compartilhado no chat. Não envie arquivos privados ou sensíveis que não queira disponibilizar a outras pessoas. A remoção de arquivos hospedados depende das regras e dos mecanismos do Catbox.</p>
-<p>Para exibir mídias compatíveis e reconhecer mídias bloqueadas, a extensão pode carregar arquivos do Catbox, KLIPY, GIPHY e Tenor e calcular seus hashes localmente. A figurinha do cabeçalho é carregada do 7TV.</p>
-<h2>Conexões com serviços externos</h2>
-<p>Solicitações de rede podem revelar aos serviços envolvidos o endereço IP e informações técnicas usuais da conexão. O tratamento realizado por Kick, KLIPY, Cloudflare, Catbox, GIPHY, Tenor, 7TV e LivePix é regido também pelas políticas desses serviços.</p>
-<h2>Apoio opcional</h2>
-<p>O QR Code é um arquivo local e aponta para <a href="https://livepix.gg/dark01i">https://livepix.gg/dark01i</a>. Abrir o botão leva você ao LivePix. Contribuir é opcional; a extensão não processa pagamentos nem lê dados de pagamento.</p>
-<h2>Escolha do usuário</h2>
-<p>A extensão apresenta um aviso de uso de dados antes de iniciar os recursos. Você pode recusar o aviso, desativar ou desinstalar a extensão. Não há ferramentas de análise de uso ou publicidade adicionadas por este pacote. Os registros de busca e compartilhamento descritos acima fazem parte da integração com a KLIPY.</p>
-<h2>Contato</h2>
-<p>Dúvidas sobre a KICKShot: <a href="mailto:darkartz75@gmail.com">darkartz75@gmail.com</a> ou <a href="https://github.com/darK01i/KICKShot/issues">suporte no GitHub</a>.</p>
-</main>
-</html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacidade — KICKShot</title><style>body{max-width:820px;margin:40px auto;padding:0 20px 48px;font:16px/1.65 system-ui,sans-serif;background:#111318;color:#f4f4f5}h1,h2,a{color:#8dff68}li{margin:.5em 0}</style></head>
+<body><h1>Política de privacidade da KICKShot</h1><p>Atualizada em 19 de outubro de 2026. Versão 1.0.16.</p>
+<p>A KICKShot é uma extensão independente para compartilhar imagens e GIFs no chat da Kick. Contato: <a href="mailto:darkartz75@gmail.com">darkartz75@gmail.com</a>.</p>
+<h2>Conteúdo e recursos</h2><ul>
+<li>A extensão lê elementos e textos da página da Kick para localizar o campo do chat e códigos de mídia. Essa identificação acontece no navegador; o histórico do chat e os nomes dos participantes não são enviados ao servidor da KICKShot.</li>
+<li>Ao enviar uma imagem do dispositivo, o arquivo passa pelo servidor intermediário da KICKShot na Cloudflare e é enviado ao ImgBB. O link retornado é inserido no chat. O arquivo fica acessível a quem tiver o link; evite imagens privadas e compartilhe somente conteúdo que tenha direito de enviar.</li>
+<li>Ao pesquisar GIFs, o termo de busca, a paginação e um identificador aleatório da instalação passam pelo servidor da KICKShot na Cloudflare e são enviados à KLIPY. Ao compartilhar um GIF, o identificador do GIF, o termo da busca e o identificador da instalação também são enviados para registrar o compartilhamento exigido pela integração. O identificador da instalação não contém seu nome, e-mail ou nome da conta da Kick.</li>
+<li>Imagens e GIFs são carregados diretamente de ImgBB, KLIPY, GIPHY, Tenor e Catbox, conforme os códigos e links presentes no chat. O Catbox permanece compatível com mídias antigas; novos uploads desta versão usam ImgBB.</li>
+<li>Ao bloquear uma mídia, a extensão pode baixar o arquivo novamente para calcular um hash SHA-256 no navegador e comparar com bloqueios locais. A lista de bloqueios e os hashes não são enviados para um banco de dados do desenvolvedor.</li>
+<li>A figurinha decorativa vem do CDN do 7TV e as fontes visuais vêm do Google Fonts. O link de apoio abre o LivePix somente quando você o escolhe ou escaneia o QR Code.</li>
+</ul>
+<h2>Retenção e exclusão</h2>
+<p>O envio ao ImgBB solicita exclusão automática após 180 segundos (3 minutos). Esse prazo depende do serviço e pode atrasar. Imagens já baixadas podem continuar visíveis no chat ou no cache do navegador após a remoção do servidor. O prazo não remove mensagens do chat nem cópias que alguém tenha salvo. Links externos e GIFs da KLIPY não recebem esse prazo.</p>
+<p>O Worker da KICKShot processa imagens e solicitações para encaminhá-las, sem gravar os arquivos em um bucket ou banco de dados próprio. Provedores envolvidos podem processar dados técnicos e manter registros conforme suas políticas. A Cloudflare também processa dados da conexão para segurança e limites de uso.</p>
+<h2>Armazenamento no navegador</h2>
+<p>O armazenamento da extensão guarda a versão do consentimento e o identificador aleatório da KLIPY. O armazenamento local do site Kick guarda posições dos painéis, códigos de mídias bloqueadas, hashes e associações com links originais. Esses dados permanecem até serem removidos no navegador; remover dados da extensão e do site pode ser necessário para apagar todos os registros locais.</p>
+<h2>Serviços externos e dados técnicos</h2>
+<p>Conexões com a Cloudflare, ImgBB, KLIPY, GIPHY, Tenor, Catbox, 7TV, Google Fonts, Kick e LivePix podem revelar endereço IP e outros dados técnicos necessários à conexão. Cada serviço trata esses dados segundo suas próprias regras. Arquivos enviados podem conter metadados; a KICKShot não garante sua remoção pelo serviço.</p>
+<p>Consulte as políticas de <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare</a>, <a href="https://imgbb.com/privacy">ImgBB</a>, <a href="https://klipy.com/support/privacy-policy">KLIPY</a>, <a href="https://giphy.com/privacy">GIPHY</a>, <a href="https://tenor.com/legal-privacy">Tenor</a>, <a href="https://catbox.moe/legal.php">Catbox</a> e <a href="https://policies.google.com/privacy">Google</a>.</p>
+<h2>Suas escolhas</h2>
+<p>O envio de imagens e as buscas dependem de ações suas. O aviso inicial explica os fluxos de dados antes de iniciar a extensão. Você pode recusar o aviso, desativar ou remover a extensão e apagar os dados locais. No Firefox, as categorias de transmissão são também declaradas no aviso de instalação.</p>
+<p>A KICKShot não vende dados, não os usa para publicidade personalizada e não inclui analytics próprios. Os dados são usados para fornecer e proteger os recursos descritos nesta política, respeitando as restrições de Uso Limitado da Chrome Web Store. A extensão não é afiliada à Kick, às lojas ou aos demais serviços citados.</p>
+<h2>Atualizações</h2><p>Esta política será revista quando houver mudanças relevantes nos serviços ou nos fluxos de dados. Alterações de consentimento são apresentadas novamente aos usuários.</p></body></html>

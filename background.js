@@ -1,3 +1,6 @@
+const IMGBB_UPLOAD_ENDPOINT = "https://kickshot-imgbb-teste.darkartz75.workers.dev/upload";
+const IMGBB_CLIENT_TOKEN = "22e88db7bbc12b4bdfffcc489461ee421aec07b5e8b6833f0d1813c68e508478";
+
 chrome.runtime.onMessage.addListener((mensagem, remetente, responder) => {
     if (!mensagem || mensagem.tipo !== "KMC_UPLOAD_IMAGEM") {
         return false;
@@ -22,7 +25,7 @@ chrome.runtime.onMessage.addListener((mensagem, remetente, responder) => {
                 typeof dadosBase64 !== "string" ||
                 !dadosBase64 ||
                 dadosBase64.length % 4 !== 0 ||
-                !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(dadosBase64)
+                !/^[A-Za-z0-9+/]+={0,2}$/.test(dadosBase64)
             ) {
                 throw new Error("Os dados da imagem estão inválidos.");
             }
@@ -41,15 +44,16 @@ chrome.runtime.onMessage.addListener((mensagem, remetente, responder) => {
                 bytes[i] = binario.charCodeAt(i);
             }
 
+            if (bytes.length > 20 * 1024 * 1024) throw new Error("A imagem é grande demais (máximo de 20 MB).");
             const dados = new FormData();
-            dados.append("reqtype", "fileupload");
-            dados.append("fileToUpload", new Blob([bytes], { type: mime }), nomeSeguro);
+            dados.append("image", new Blob([bytes], { type: mime }), nomeSeguro);
 
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 30000);
             let resposta;
             try {
-                resposta = await fetch("https://catbox.moe/user/api.php", {
+                resposta = await fetch(IMGBB_UPLOAD_ENDPOINT, {
+                    headers: { Authorization: "Bearer " + IMGBB_CLIENT_TOKEN },
                     method: "POST",
                     body: dados,
                     signal: controller.signal
@@ -59,23 +63,26 @@ chrome.runtime.onMessage.addListener((mensagem, remetente, responder) => {
             }
 
             if (!resposta.ok) {
-                throw new Error("Catbox respondeu HTTP " + resposta.status + ".");
+                const detalhe = await resposta.json().catch(() => null);
+                throw new Error(detalhe?.error || "O serviço de imagens respondeu HTTP " + resposta.status + ".");
             }
 
-            const texto = (await resposta.text()).trim();
+            const resultado = await resposta.json();
+            if (resultado.expiration !== 180) throw new Error("O servidor não confirmou a exclusão em 3 minutos.");
+            const texto = resultado.url;
             let url;
             try {
                 url = new URL(texto);
             } catch (erro) {
-                throw new Error("Catbox não retornou um link válido.");
+                throw new Error("ImgBB não retornou um link válido.");
             }
 
             if (
                 url.protocol !== "https:" ||
-                url.hostname !== "files.catbox.moe" ||
+                url.hostname !== "i.ibb.co" || url.username || url.password || url.port ||
                 url.pathname === "/"
             ) {
-                throw new Error("Catbox retornou um endereço inesperado.");
+                throw new Error("ImgBB retornou um endereço inesperado.");
             }
 
             responder({ sucesso: true, url: url.href });
@@ -275,7 +282,7 @@ chrome.runtime.onMessage.addListener((mensagem, remetente, responder) => {
     }
 
     const hostsPermitidos = new Set([
-        "files.catbox.moe",
+        "files.catbox.moe", "i.ibb.co",
         "media.giphy.com",
         "media1.giphy.com",
         "i.giphy.com",

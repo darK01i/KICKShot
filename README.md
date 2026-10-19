@@ -1,11 +1,11 @@
 # KICKShot
-A KICKShot é uma extensão independente e gratuita, desenvolvida com IA e inspirada em projetos semelhantes. Permite enviar imagens, buscar GIFs no GIPHY e visualizar mídias diretamente no chat da Kick, tornando as transmissões mais interativas. Projeto sem fins lucrativos.
+A KICKShot é uma extensão independente e gratuita, desenvolvida com IA e inspirada em projetos semelhantes. Permite enviar imagens, buscar GIFs no KLIPY e visualizar mídias diretamente no chat da Kick, tornando as transmissões mais interativas. Projeto sem fins lucrativos.
 ## Aviso sobre conteúdo enviado
-**Aviso:** Não envie conteúdo ilegal ou criminoso. Você é responsável pelas imagens compartilhadas. A extensão não se responsabiliza pelo conteúdo enviado. As imagens são hospedadas pelo Catbox e estão sujeitas às suas regras.
+**Aviso:** Não envie conteúdo ilegal ou criminoso. Você é responsável pelas imagens compartilhadas. A extensão não se responsabiliza pelo conteúdo enviado. As imagens são hospedadas pelo ImgBB, com exclusão solicitada após 3 minutos, e estão sujeitas às suas regras.
 Extensão independente para compartilhar imagens e GIFs no chat da Kick.
 ## Chrome, Firefox e GitHub
 1. Chrome: instale na loja oficial (https://chromewebstore.google.com/detail/kickshot/nlgaiipgkgnpgfodboplfhjlgoohbhne).
 2. Firefox: instale na loja oficial (https://addons.mozilla.org/pt-BR/firefox/addon/kickshot/).
-3. GitHub: instale a ultima última versão (https://github.com/darK01i/KICKShot/releases/tag/v1.0.14).
+3. GitHub: instale a ultima última versão (https://github.com/darK01i/KICKShot/releases/tag/v1.0.16).
 4. Abra `chrome://extensions` ou `about:debugging` e ative o modo de desenvolvedor.
 5. Clique em **Carregar sem compactação** e selecione a pasta extraída que contém `manifest.json`.

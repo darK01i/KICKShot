@@ -1,9 +1,9 @@
-Compartilhe imagens e GIFs no chat da Kick com a KICKShot! Envie imagens do seu dispositivo, cole links compatíveis ou encontre GIFs pela busca integrada da KLIPY. A extensão insere o código de mídia no campo do chat para você enviar e permite visualizar imagens e GIFs compatíveis enviados por outros usuários.
+KICKShot é uma extensão independente e gratuita para compartilhar imagens e GIFs no chat da Kick.
 
-A KICKShot mantém compatibilidade com códigos de mídia do GIPHY, Tenor e Catbox. Para visualizar as mídias da KICKShot no chat, os destinatários precisam usar uma extensão compatível. Esta versão não substitui códigos por emotes oficiais da Kick.
+Escolha, cole ou arraste uma imagem, use links compatíveis e busque GIFs pela KLIPY. A extensão prepara o código para compartilhar no chat e exibe mídias compatíveis enviadas por outras pessoas que usam a extensão.
 
-Antes de usar os recursos, você recebe um aviso de privacidade. As buscas de GIFs e os registros de compartilhamento passam pelo servidor intermediário da KICKShot, hospedado na Cloudflare, e são encaminhados à KLIPY. Imagens enviadas do seu dispositivo são hospedadas pelo Catbox. Consulte a política de privacidade para os detalhes.
+Imagens do dispositivo passam por um servidor intermediário da KICKShot na Cloudflare e são hospedadas no ImgBB com exclusão solicitada após 3 minutos. A remoção pelo serviço pode atrasar; imagens já carregadas podem permanecer no navegador. Esse prazo não se aplica a links externos nem aos GIFs da busca KLIPY.
 
-Não compartilhe conteúdo ilegal ou que viole os direitos de terceiros. Você é responsável pelas imagens que compartilha e deve respeitar as regras da Kick e dos serviços utilizados. O apoio pelo LivePix é totalmente opcional.
+A extensão permite visualizar códigos antigos de Catbox, GIPHY e Tenor, além dos códigos atuais. Você é responsável pelo conteúdo que envia. Não compartilhe conteúdo ilegal ou que viole direitos de terceiros.
 
-A KICKShot é uma extensão independente e não é afiliada à Kick, à KLIPY, ao GIPHY, ao Tenor ou ao Catbox.
+O aviso inicial e a política de privacidade explicam os serviços utilizados e os dados transmitidos. A KICKShot é um projeto independente, sem afiliação à Kick, KLIPY, ImgBB ou aos demais serviços citados. O apoio pelo LivePix é totalmente opcional.
